@@ -3060,17 +3060,24 @@
       const prevFile = state.images[prevIdx];
       if (prevFile) {
         const prevPath = `${state.currentFolder}/${prevFile}`;
-        const newSrc = `/api/thumbnail?path=${encodeURIComponent(prevPath)}&size=320`;
-        if (imgPrev.src !== newSrc) {
-          imgPrev.style.opacity = '0';
+        const newUrl = new URL(`/api/thumbnail?path=${encodeURIComponent(prevPath)}&size=320`, window.location.href).href;
+        
+        lblPrev.innerText = prevFile;
+        lblPrev.title = prevFile;
+
+        if (imgPrev.src !== newUrl) {
           imgPrev.onload = () => { imgPrev.style.opacity = '1'; };
-          imgPrev.onerror = () => { imgPrev.src = `/api/image?path=${encodeURIComponent(prevPath)}`; imgPrev.style.opacity = '1'; };
-          imgPrev.src = newSrc;
+          imgPrev.onerror = () => {
+            imgPrev.src = `/api/image?path=${encodeURIComponent(prevPath)}`;
+            imgPrev.style.opacity = '1';
+          };
+          imgPrev.src = newUrl;
+          if (imgPrev.complete) {
+            imgPrev.style.opacity = '1';
+          }
         } else {
           imgPrev.style.opacity = '1';
         }
-        lblPrev.innerText = prevFile;
-        lblPrev.title = prevFile;
         cardPrev.classList.remove('hidden', 'opacity-20', 'pointer-events-none');
         cardPrev.classList.add('opacity-60');
       }
@@ -3079,17 +3086,24 @@
       const nextFile = state.images[nextIdx];
       if (nextFile) {
         const nextPath = `${state.currentFolder}/${nextFile}`;
-        const newSrc = `/api/thumbnail?path=${encodeURIComponent(nextPath)}&size=320`;
-        if (imgNext.src !== newSrc) {
-          imgNext.style.opacity = '0';
+        const newUrl = new URL(`/api/thumbnail?path=${encodeURIComponent(nextPath)}&size=320`, window.location.href).href;
+        
+        lblNext.innerText = nextFile;
+        lblNext.title = nextFile;
+
+        if (imgNext.src !== newUrl) {
           imgNext.onload = () => { imgNext.style.opacity = '1'; };
-          imgNext.onerror = () => { imgNext.src = `/api/image?path=${encodeURIComponent(nextPath)}`; imgNext.style.opacity = '1'; };
-          imgNext.src = newSrc;
+          imgNext.onerror = () => {
+            imgNext.src = `/api/image?path=${encodeURIComponent(nextPath)}`;
+            imgNext.style.opacity = '1';
+          };
+          imgNext.src = newUrl;
+          if (imgNext.complete) {
+            imgNext.style.opacity = '1';
+          }
         } else {
           imgNext.style.opacity = '1';
         }
-        lblNext.innerText = nextFile;
-        lblNext.title = nextFile;
         cardNext.classList.remove('hidden', 'opacity-20', 'pointer-events-none');
         cardNext.classList.add('opacity-60');
       }
@@ -3353,10 +3367,22 @@
           logMsg(t('log_action_ok', { action: action.toUpperCase(), file: filename, target: targetFolder || 'Recycle Bin' }), 'success');
 
           const proceed = () => {
-            state.images.splice(state.currentIndex, 1);
-            if (state.currentIndex >= state.images.length) {
-              state.currentIndex = Math.max(0, state.images.length - 1);
+            if (action === 'move' || action === 'delete') {
+              state.images.splice(state.currentIndex, 1);
+              if (state.currentIndex >= state.images.length) {
+                state.currentIndex = Math.max(0, state.images.length - 1);
+              }
+            } else if (action === 'copy') {
+              if (state.images.length > 0 && state.currentIndex < state.images.length - 1) {
+                state.currentIndex++;
+              }
             }
+
+            const imgPrev = document.getElementById('stage-prev-img');
+            const imgNext = document.getElementById('stage-next-img');
+            if (imgPrev) imgPrev.src = '';
+            if (imgNext) imgNext.src = '';
+
             displayCurrentImage();
           };
 
