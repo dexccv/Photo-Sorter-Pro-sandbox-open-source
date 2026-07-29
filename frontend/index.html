@@ -230,19 +230,22 @@
 
   <!-- TOP HEADER (Control Bar) -->
   <header class="h-14 border-b border-brand-border bg-brand-panel flex items-center justify-between px-6 z-10">
-    <div class="flex items-center gap-3">
-      <div
-        class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-blue to-purple-600 flex items-center justify-center shadow-lg shadow-brand-blue/20">
-        <i data-lucide="image" class="w-5 h-5 text-white"></i>
+    <div class="flex items-center gap-3 select-none">
+      <div class="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center shadow-md text-brand-blue group hover:border-brand-blue/50 transition">
+        <i data-lucide="layers" class="w-4 h-4 text-brand-blue"></i>
       </div>
       <div>
         <div class="flex items-center gap-2">
-          <h1 class="text-sm font-semibold tracking-wider bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent" data-i18n="title">PHOTO SORTER PRO</h1>
-          <a href="https://github.com/dexccv" target="_blank" rel="noopener noreferrer" class="text-[9px] font-mono bg-purple-950/80 hover:bg-purple-900 border border-purple-800 text-purple-300 px-2 py-0.5 rounded-full transition flex items-center gap-1 shadow-sm">
-            <i data-lucide="github" class="w-3 h-3 text-purple-400"></i> by dexccv
+          <h1 class="text-sm font-semibold tracking-tight text-zinc-100" data-i18n="title">Photo Sorter Pro</h1>
+          <span class="text-[10px] font-mono font-medium text-zinc-400 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded">v2.5</span>
+        </div>
+        <div class="flex items-center gap-2 mt-0.5">
+          <p class="text-[10px] text-zinc-400 font-sans tracking-normal leading-none" data-i18n="subtitle">Professional Media Organization Studio</p>
+          <span class="text-zinc-700 text-[10px]">•</span>
+          <a href="https://github.com/dexccv" target="_blank" rel="noopener noreferrer" class="text-[10px] font-mono text-zinc-400 hover:text-purple-400 transition flex items-center gap-1">
+            <i data-lucide="github" class="w-3 h-3 text-purple-400"></i> dexccv
           </a>
         </div>
-        <p class="text-[10px] text-zinc-500 font-mono tracking-widest leading-none mt-0.5" data-i18n="subtitle">ELITE SANDBOX v2.5</p>
       </div>
     </div>
 
@@ -342,6 +345,11 @@
       </button>
     </div>
   </header>
+
+  <!-- Preload Progress Bar Overlay -->
+  <div id="preload-progress-container" class="h-1 w-full bg-zinc-950 relative overflow-hidden hidden z-20 shrink-0">
+    <div id="preload-progress-bar" class="h-full bg-gradient-to-r from-brand-blue via-purple-500 to-emerald-400 w-0 transition-all duration-200"></div>
+  </div>
 
   <!-- MAIN WORKSPACE -->
   <main class="flex-1 flex overflow-hidden relative" id="workspace">
@@ -525,7 +533,7 @@
           </div>
 
           <!-- Empty State Overlay -->
-          <div id="empty-state" class="flex flex-col items-center gap-3 text-zinc-500 max-w-sm text-center">
+          <div id="empty-state" class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-zinc-500 max-w-sm m-auto text-center z-10 pointer-events-none">
             <i data-lucide="images" class="w-12 h-12 text-zinc-600 animate-pulse"></i>
             <h3 class="font-medium text-sm text-zinc-400" data-i18n="lbl_no_image">No image selected</h3>
             <p class="text-xs leading-relaxed" data-i18n="lbl_no_image_desc">Please select a source folder in the
@@ -708,6 +716,10 @@
           Connected</span></span>
       <span class="text-zinc-700">|</span>
       <span id="session-status" data-i18n="log_ready">System ready. Please open a folder.</span>
+      <span id="preload-status-badge" class="hidden flex items-center gap-1.5 font-mono text-[10px] text-brand-blue bg-brand-blue/10 border border-brand-blue/30 px-2 py-0.5 rounded-full">
+        <span class="w-1.5 h-1.5 rounded-full bg-brand-blue animate-pulse"></span>
+        <span id="preload-status-text">Pre-loading 0%</span>
+      </span>
     </div>
     <div class="flex items-center gap-4">
       <a href="https://github.com/dexccv" target="_blank" rel="noopener noreferrer" class="hover:text-purple-400 transition flex items-center gap-1 text-zinc-400 font-mono">
@@ -717,6 +729,98 @@
       <span class="font-mono text-brand-blue" data-i18n="lbl_footer_help">Ctrl+H / F1: Shortcuts Guide</span>
     </div>
   </footer>
+
+  <!-- Copy / Move Action Pop-Up Modal -->
+  <div id="copy-move-modal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-lg bg-zinc-950 border border-brand-border rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+      <div class="p-5 border-b border-brand-border flex items-center justify-between bg-zinc-900/60">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-xl bg-brand-blue/10 text-brand-blue border border-brand-blue/20">
+            <i data-lucide="copy" id="copy-move-modal-icon" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-sm font-semibold text-white tracking-wide" id="copy-move-modal-title">Copy / Move Foto</h2>
+            <p class="text-[11px] text-zinc-400 font-mono" id="copy-move-modal-subtitle">0 foto dipilih</p>
+          </div>
+        </div>
+        <button onclick="closeCopyMoveModal()" class="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+        <!-- Action Type Switcher (Copy vs Move) -->
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">Pilih Aksi</label>
+          <div class="grid grid-cols-2 gap-2 bg-zinc-900 p-1 rounded-xl border border-brand-border">
+            <button type="button" onclick="setCopyMoveMode('copy')" id="btn-mode-copy"
+              class="py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition bg-brand-blue text-white shadow">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy (Salin File)
+            </button>
+            <button type="button" onclick="setCopyMoveMode('move')" id="btn-mode-move"
+              class="py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition text-zinc-400 hover:text-white">
+              <i data-lucide="arrow-right-left" class="w-3.5 h-3.5"></i> Move (Pindah File)
+            </button>
+          </div>
+        </div>
+
+        <!-- Target Folder Path Input with Browse Button -->
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Direktori Tujuan</label>
+          <div class="flex gap-2">
+            <div class="flex-1 relative flex items-center">
+              <i data-lucide="folder" class="w-4 h-4 text-zinc-500 absolute left-3"></i>
+              <input type="text" id="copy-move-target-folder"
+                class="w-full pl-9 pr-3 py-2 text-xs bg-zinc-900 border border-brand-border rounded-xl font-mono text-zinc-200 outline-none focus:border-brand-blue"
+                placeholder="Pilih atau ketik direktori tujuan...">
+            </div>
+            <button type="button" onclick="browseFolderForCopyMove()"
+              class="px-3.5 py-2 rounded-xl bg-zinc-900 border border-brand-border hover:bg-brand-blue hover:text-white text-zinc-300 text-xs font-medium flex items-center gap-1.5 transition shrink-0">
+              <i data-lucide="folder-search" class="w-4 h-4"></i> Browse
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Access Target Shortcuts -->
+        <div id="copy-move-quick-access" class="hidden">
+          <label class="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-1.5">Quick Access / Preset Target</label>
+          <div class="flex flex-wrap gap-1.5" id="copy-move-quick-list">
+            <!-- Loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- Conflict Resolution Strategy -->
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-1.5">Jika Terjadi Konflik Nama File</label>
+          <select id="copy-move-conflict" class="w-full bg-zinc-900 border border-brand-border rounded-xl p-2 text-xs text-zinc-300 font-mono outline-none focus:border-brand-blue">
+            <option value="skip">Skip (Abaikan jika file sudah ada)</option>
+            <option value="keep_both">Keep Both (Buat salinan baru dengan nomor _1, _2)</option>
+            <option value="overwrite">Overwrite (Timpa file yang lama)</option>
+          </select>
+        </div>
+
+        <!-- Selected Files Preview list -->
+        <div>
+          <label class="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-1">Daftar Foto Terpilih</label>
+          <div class="bg-zinc-900/80 border border-brand-border rounded-xl p-2.5 max-h-32 overflow-y-auto space-y-1 font-mono text-[11px] text-zinc-300" id="copy-move-files-list">
+            <!-- Loaded dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="p-4 border-t border-brand-border bg-zinc-900/60 flex items-center justify-end gap-2">
+        <button type="button" onclick="closeCopyMoveModal()"
+          class="px-4 py-2 rounded-xl bg-zinc-900 border border-brand-border hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs font-medium transition">
+          Batal
+        </button>
+        <button type="button" onclick="executeCopyMoveAction()" id="btn-execute-copy-move"
+          class="px-5 py-2 rounded-xl bg-brand-blue hover:bg-brand-blue/80 text-white font-semibold text-xs flex items-center gap-2 shadow-lg shadow-brand-blue/20 transition">
+          <i data-lucide="check" class="w-4 h-4"></i> Eksekusi Aksi
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Follow GitHub Pop-Up Modal -->
   <div id="github-follow-modal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 hidden">
@@ -1059,8 +1163,8 @@
     // Internationalization dataset
     const TRANSLATIONS = {
       en: {
-        title: "PHOTO SORTER PRO",
-        subtitle: "ELITE EDITION v2.3",
+        title: "Photo Sorter Pro",
+        subtitle: "Professional Media Organization Studio",
         tab_previews: "Folder Contents",
         tab_logs: "Activity Log",
         tab_presets: "Presets",
@@ -1961,7 +2065,13 @@
       isThisPC: false,
       pinned_folders: [],
       last_folder: '',
-      last_index: 0
+      last_index: 0,
+      recent_folders: [],      // last 10 opened folders
+      per_folder_index: {},    // {folder: last_index}
+      compareMode: false,      // compare mode state
+      selectedIndices: [],     // array of selected indices for multi-select
+      lastSelectedIndex: -1,   // last clicked index for shift range select
+      copyMoveMode: 'copy'     // 'copy' or 'move' for modal
     };
 
     // ================================================================
@@ -2178,14 +2288,46 @@
       img.src = url;
     }
 
+    // Debounce timer for prewarm scheduler
+    let _prewarmTimer = null;
+
     function preloadNeighbors(index) {
-      const neighbors = [index + 1, index + 2, index - 1];
-      neighbors.forEach(i => {
+      // 1. Immediately preload full-res images for instant Next/Prev in browser cache
+      const immediateNeighbors = [index + 1, index + 2, index - 1];
+      immediateNeighbors.forEach(i => {
         if (i >= 0 && i < state.images.length) {
           const path = `${state.currentFolder}/${state.images[i]}`;
           preloadImage(path);
         }
       });
+
+      // 2. Debounced: pre-warm thumbnails on backend for next 5 images (non-blocking)
+      // Debounce so rapid navigation doesn't spam the backend
+      if (_prewarmTimer) clearTimeout(_prewarmTimer);
+      _prewarmTimer = setTimeout(() => {
+        const paths = [];
+        // Collect next 5 + prev 2 image paths for backend thumbnail pre-warming
+        for (let offset = 1; offset <= 5; offset++) {
+          const i = index + offset;
+          if (i >= 0 && i < state.images.length) {
+            paths.push(`${state.currentFolder}/${state.images[i]}`);
+          }
+        }
+        for (let offset = 1; offset <= 2; offset++) {
+          const i = index - offset;
+          if (i >= 0 && i < state.images.length) {
+            paths.push(`${state.currentFolder}/${state.images[i]}`);
+          }
+        }
+
+        if (paths.length > 0) {
+          fetch('/api/prewarm-thumbnails', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paths, size: 320 })
+          }).catch(() => {}); // fire-and-forget, ignore errors
+        }
+      }, 250); // wait 250ms after last navigation to batch requests
     }
 
     function dismissGithubModal() {
@@ -2237,6 +2379,31 @@
         state.last_folder = data.last_folder || "";
         state.last_index = data.last_index || 0;
         state.pinned_folders = data.pinned_folders || [];
+
+        // Restore extended session fields
+        state.recent_folders = data.recent_folders || [];
+        state.per_folder_index = data.per_folder_index || {};
+        if (data.compare_mode !== undefined) {
+          state.compareMode = data.compare_mode;
+          // Sync compare mode button UI
+          const cmpBtn = document.getElementById('compare-mode-btn');
+          if (cmpBtn) {
+            if (state.compareMode) cmpBtn.classList.add('active');
+            else cmpBtn.classList.remove('active');
+          }
+        }
+
+        // Restore panel sizes
+        if (data.panel_sizes) {
+          state.panelSizes = { ...state.panelSizes, ...data.panel_sizes };
+          const leftPanel = document.getElementById('left-panel');
+          const rightPanel = document.getElementById('right-panel');
+          const bottomPanel = document.getElementById('bottom-panel');
+          if (leftPanel && data.panel_sizes.left) leftPanel.style.width = `${data.panel_sizes.left}px`;
+          if (rightPanel && data.panel_sizes.right) rightPanel.style.width = `${data.panel_sizes.right}px`;
+          if (bottomPanel && data.panel_sizes.bottom) bottomPanel.style.height = `${data.panel_sizes.bottom}px`;
+        }
+
         if (data.layout) {
           state.layout = data.layout;
           updateLayoutDOM();
@@ -2393,9 +2560,28 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(state.layout)
         });
+        // Also persist compare_mode derived from show_stage
+        saveSessionUI({ compare_mode: state.layout.show_stage !== false });
       } catch (e) {
         console.warn("Failed saving layout session", e);
       }
+    }
+
+    // Debounced save of panel sizes and compare_mode to /api/session-ui
+    let _sessionUITimer = null;
+    function saveSessionUI(extra = {}) {
+      if (_sessionUITimer) clearTimeout(_sessionUITimer);
+      _sessionUITimer = setTimeout(() => {
+        const payload = {
+          panel_sizes: { ...state.panelSizes },
+          ...extra
+        };
+        fetch('/api/session-ui', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(() => {});
+      }, 800); // debounce 800ms after last resize
     }
 
     function togglePanel(type) {
@@ -2942,6 +3128,136 @@
       await fetchImages(cleaned);
     }
 
+    // Global Preloader & Cache System
+    let _preloadState = {
+      folder: '',
+      total: 0,
+      loaded: 0,
+      cancelled: false
+    };
+
+    function preloadStagePriority(idx) {
+      if (!state.images || state.images.length === 0 || idx < 0) return;
+      const total = state.images.length;
+      
+      // Top #1 Priority: 3 Stage Photos (Active, Prev, Next)
+      const prevIdx = (idx - 1 + total) % total;
+      const nextIdx = (idx + 1) % total;
+      const stageIndices = [idx, prevIdx, nextIdx];
+
+      stageIndices.forEach(i => {
+        const file = state.images[i];
+        if (!file) return;
+        const fullPath = `${state.currentFolder}/${file}`;
+        const imgUrl = `/api/image?path=${encodeURIComponent(fullPath)}`;
+        if (!_preloadCache.has(imgUrl)) {
+          const loader = new window.Image();
+          loader.onload = () => _preloadCache.add(imgUrl);
+          loader.src = imgUrl;
+        }
+      });
+    }
+
+    function updateSmartRadiusPreload(centerIdx) {
+      if (!state.images || state.images.length === 0 || centerIdx < 0) return;
+      const total = state.images.length;
+
+      // Smart Directional Radius: +1 to +8 forward, -1 to -3 backward
+      const radiusIndices = [];
+      for (let offset = 1; offset <= 8; offset++) {
+        radiusIndices.push((centerIdx + offset) % total);
+      }
+      for (let offset = 1; offset <= 3; offset++) {
+        radiusIndices.push((centerIdx - offset + total) % total);
+      }
+
+      radiusIndices.forEach(i => {
+        const file = state.images[i];
+        if (!file) return;
+        const fullPath = `${state.currentFolder}/${file}`;
+        const imgUrl = `/api/image?path=${encodeURIComponent(fullPath)}`;
+        if (!_preloadCache.has(imgUrl)) {
+          const loader = new window.Image();
+          loader.onload = () => _preloadCache.add(imgUrl);
+          loader.src = imgUrl;
+        }
+      });
+    }
+
+    async function startFolderPreloader(folderPath, imagesList) {
+      _preloadState.cancelled = true;
+      _preloadState = {
+        folder: folderPath,
+        total: imagesList ? imagesList.length : 0,
+        loaded: 0,
+        cancelled: false
+      };
+
+      const container = document.getElementById('preload-progress-container');
+      const bar = document.getElementById('preload-progress-bar');
+      const badge = document.getElementById('preload-status-badge');
+      const text = document.getElementById('preload-status-text');
+
+      if (!imagesList || imagesList.length === 0) {
+        if (container) container.classList.add('hidden');
+        if (badge) badge.classList.add('hidden');
+        return;
+      }
+
+      if (container) {
+        container.classList.remove('hidden');
+        bar.className = "h-full bg-gradient-to-r from-brand-blue via-purple-500 to-emerald-400 w-0 transition-all duration-200";
+        bar.style.width = '0%';
+      }
+      if (badge) badge.classList.remove('hidden');
+      if (text) text.innerText = `Pre-loading 0% (0/${imagesList.length})`;
+
+      const thSize = state.thumbnail_size || 'medium';
+      let thumbPx = thSize === 'small' ? 160 : (thSize === 'large' ? 320 : 240);
+
+      // Pre-warm backend thumbnail cache in background chunks
+      for (let i = 0; i < imagesList.length; i += 50) {
+        if (_preloadState.cancelled || _preloadState.folder !== folderPath) break;
+        const chunkPaths = imagesList.slice(i, i + 50).map(name => `${folderPath}/${name}`);
+        try {
+          fetch('/api/prewarm-thumbnails', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paths: chunkPaths, size: thumbPx })
+          }).catch(() => {});
+        } catch (e) {}
+      }
+
+      // Pre-cache full images in smart radius around active cursor
+      updateSmartRadiusPreload(state.currentIndex >= 0 ? state.currentIndex : 0);
+
+      _preloadState.loaded = imagesList.length;
+      updatePreloadUI();
+
+      function updatePreloadUI() {
+        if (_preloadState.cancelled || _preloadState.folder !== folderPath) return;
+        const total = _preloadState.total;
+        const loaded = Math.min(_preloadState.loaded, total);
+        const percent = total > 0 ? Math.floor((loaded / total) * 100) : 100;
+
+        if (bar) bar.style.width = `${percent}%`;
+        if (text) text.innerText = `Pre-loading ${percent}% (${loaded}/${total})`;
+
+        if (percent >= 100) {
+          if (bar) bar.className = "h-full bg-emerald-500 w-full transition-all duration-200";
+          if (text) text.innerText = `Ready (100% Pre-loaded - Zero Delay)`;
+          setTimeout(() => {
+            if (_preloadState.folder === folderPath && container) {
+              container.classList.add('hidden');
+              setTimeout(() => {
+                if (badge && _preloadState.folder === folderPath) badge.classList.add('hidden');
+              }, 3000);
+            }
+          }, 1500);
+        }
+      }
+    }
+
     async function fetchImages(path) {
       try {
         const res = await fetch(`/api/scan-images?path=${encodeURIComponent(path)}`);
@@ -2953,12 +3269,20 @@
 
         state.images = data.images;
         state.currentIndex = data.lastIndex !== undefined && data.lastIndex >= 0 && data.lastIndex < data.images.length ? data.lastIndex : (data.images.length > 0 ? 0 : -1);
+        state.selectedIndices = state.currentIndex >= 0 ? [state.currentIndex] : [];
+        state.lastSelectedIndex = state.currentIndex;
 
         logMsg(t('log_scan_dir', { path: path, count: state.images.length }));
         const imgWord = (state.lang === 'id' || state.lang === 'jv' || state.lang === 'jv-tg') ? 'gambar' : state.lang === 'zh' ? '图片' : state.lang === 'ja' ? '枚' : state.lang === 'pt' ? 'imagens' : 'images';
         document.getElementById('session-status').innerText = `Folder: ${path} (${state.images.length} ${imgWord})`;
 
+        renderImagePreviews();
         displayCurrentImage();
+
+        // Start background preloader with progress bar
+        if (state.images.length > 0) {
+          startFolderPreloader(path, state.images);
+        }
       } catch (e) {
         logMsg(`Gagal memuat folder '${path}': ${e.message}`, 'error');
         showCustomDialog({
@@ -2982,27 +3306,22 @@
         const path = `${state.currentFolder}/${filename}`;
         const newSrc = `/api/image?path=${encodeURIComponent(path)}`;
 
-        // Show skeleton while loading
-        imgEl.style.opacity = '0';
-        imgEl.style.display = 'block';
+        // Instant Top #1 Priority for 3 Stage Photos (Active, Prev, Next)
+        preloadStagePriority(state.currentIndex);
+
         emptyState.style.display = 'none';
         counter.innerText = `${state.currentIndex + 1} / ${state.images.length}`;
 
-        // Load image, fade in on complete
-        const loader = new window.Image();
-        loader.onload = () => {
+        // Instant image src assignment without opacity zeroing lag
+        imgEl.style.transition = 'none';
+        imgEl.style.opacity = '1';
+        imgEl.style.display = 'block';
+        if (imgEl.src !== newSrc) {
           imgEl.src = newSrc;
-          imgEl.style.transition = 'opacity 0.18s ease';
-          imgEl.style.opacity = '1';
-        };
-        loader.onerror = () => {
-          imgEl.src = newSrc; // try anyway
-          imgEl.style.opacity = '1';
-        };
-        loader.src = newSrc;
+        }
 
-        // Preload neighbors for instant next/prev navigation
-        requestIdleCallback(() => preloadNeighbors(state.currentIndex), { timeout: 800 });
+        // Preload smart radius for instant next/prev navigation
+        requestIdleCallback(() => updateSmartRadiusPreload(state.currentIndex), { timeout: 800 });
 
         // Fetch metadata asynchronously without blocking image display
         fetchMetadata(path);
@@ -3018,7 +3337,7 @@
       }
 
       renderStageNeighbors();
-      renderImagePreviews();
+      updateFilmstripSelection();
     }
 
     function renderStageNeighbors() {
@@ -3060,23 +3379,14 @@
       const prevFile = state.images[prevIdx];
       if (prevFile) {
         const prevPath = `${state.currentFolder}/${prevFile}`;
-        const newUrl = new URL(`/api/thumbnail?path=${encodeURIComponent(prevPath)}&size=320`, window.location.href).href;
+        const newUrl = new URL(`/api/image?path=${encodeURIComponent(prevPath)}`, window.location.href).href;
         
         lblPrev.innerText = prevFile;
         lblPrev.title = prevFile;
 
+        imgPrev.style.opacity = '1';
         if (imgPrev.src !== newUrl) {
-          imgPrev.onload = () => { imgPrev.style.opacity = '1'; };
-          imgPrev.onerror = () => {
-            imgPrev.src = `/api/image?path=${encodeURIComponent(prevPath)}`;
-            imgPrev.style.opacity = '1';
-          };
           imgPrev.src = newUrl;
-          if (imgPrev.complete) {
-            imgPrev.style.opacity = '1';
-          }
-        } else {
-          imgPrev.style.opacity = '1';
         }
         cardPrev.classList.remove('hidden', 'opacity-20', 'pointer-events-none');
         cardPrev.classList.add('opacity-60');
@@ -3086,43 +3396,285 @@
       const nextFile = state.images[nextIdx];
       if (nextFile) {
         const nextPath = `${state.currentFolder}/${nextFile}`;
-        const newUrl = new URL(`/api/thumbnail?path=${encodeURIComponent(nextPath)}&size=320`, window.location.href).href;
+        const newUrl = new URL(`/api/image?path=${encodeURIComponent(nextPath)}`, window.location.href).href;
         
         lblNext.innerText = nextFile;
         lblNext.title = nextFile;
 
+        imgNext.style.opacity = '1';
         if (imgNext.src !== newUrl) {
-          imgNext.onload = () => { imgNext.style.opacity = '1'; };
-          imgNext.onerror = () => {
-            imgNext.src = `/api/image?path=${encodeURIComponent(nextPath)}`;
-            imgNext.style.opacity = '1';
-          };
           imgNext.src = newUrl;
-          if (imgNext.complete) {
-            imgNext.style.opacity = '1';
-          }
-        } else {
-          imgNext.style.opacity = '1';
         }
         cardNext.classList.remove('hidden', 'opacity-20', 'pointer-events-none');
         cardNext.classList.add('opacity-60');
       }
     }
 
+    function updateFilmstripSelection() {
+      const container = document.getElementById('tab-previews');
+      if (!container) return;
+
+      const selCount = (state.selectedIndices || []).length;
+      const countEl = document.getElementById('folder-item-count');
+      if (countEl) {
+        countEl.innerText = `${state.images.length} items${selCount > 1 ? ' (' + selCount + ' terpilih)' : ''}`;
+      }
+
+      // If container has no DOM cards yet, trigger initial render
+      if (container.children.length === 0 && state.images.length > 0) {
+        renderImagePreviews();
+        return;
+      }
+
+      const cards = container.children;
+      const selectedSet = new Set(state.selectedIndices || []);
+
+      for (let i = 0; i < cards.length; i++) {
+        const card = cards[i];
+        const idx = parseInt(card.dataset.index, 10);
+        if (isNaN(idx)) continue;
+
+        const isActive = idx === state.currentIndex;
+        const isSelected = selectedSet.has(idx);
+
+        if (isSelected) {
+          card.className = card.className.replace(/bg-zinc-\d+|border-brand-border|hover:border-zinc-700/g, '').trim();
+          if (!card.classList.contains('border-brand-blue')) {
+            card.classList.add('bg-brand-blue/20', 'border-brand-blue', 'ring-2', 'ring-brand-blue/60', 'shadow-lg');
+          }
+          if (!card.querySelector('.check-badge')) {
+            const checkBadge = document.createElement('div');
+            checkBadge.className = 'check-badge absolute top-1.5 left-1.5 z-20 w-4 h-4 bg-brand-blue text-white rounded-full flex items-center justify-center text-[10px] font-bold shadow';
+            checkBadge.innerText = '✓';
+            card.appendChild(checkBadge);
+          }
+        } else {
+          const badge = card.querySelector('.check-badge');
+          if (badge) badge.remove();
+          card.classList.remove('bg-brand-blue/20', 'ring-2', 'ring-brand-blue/60', 'shadow-lg');
+          if (isActive) {
+            card.classList.add('bg-zinc-800', 'border-brand-blue');
+            card.classList.remove('bg-zinc-950', 'border-brand-border');
+          } else {
+            card.classList.add('bg-zinc-950', 'border-brand-border');
+            card.classList.remove('bg-zinc-800', 'border-brand-blue');
+          }
+        }
+
+        if (isActive) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+      }
+    }
+
+
+    function getSelectedFiles() {
+      if (!state.selectedIndices || state.selectedIndices.length === 0) {
+        if (state.currentIndex >= 0 && state.images[state.currentIndex]) {
+          return [state.images[state.currentIndex]];
+        }
+        return [];
+      }
+      return state.selectedIndices.map(idx => state.images[idx]).filter(Boolean);
+    }
+
+    function handleThumbnailClick(idx, e) {
+      if (!state.selectedIndices) state.selectedIndices = [];
+
+      if (e.ctrlKey || e.metaKey) {
+        const selIdx = state.selectedIndices.indexOf(idx);
+        if (selIdx >= 0) {
+          state.selectedIndices.splice(selIdx, 1);
+        } else {
+          state.selectedIndices.push(idx);
+        }
+        state.lastSelectedIndex = idx;
+        state.currentIndex = idx;
+      } else if (e.shiftKey && state.lastSelectedIndex !== undefined && state.lastSelectedIndex >= 0) {
+        const start = Math.min(state.lastSelectedIndex, idx);
+        const end = Math.max(state.lastSelectedIndex, idx);
+        const range = [];
+        for (let i = start; i <= end; i++) {
+          range.push(i);
+        }
+        state.selectedIndices = Array.from(new Set([...state.selectedIndices, ...range]));
+        state.currentIndex = idx;
+      } else {
+        state.selectedIndices = [idx];
+        state.lastSelectedIndex = idx;
+        state.currentIndex = idx;
+      }
+
+      displayCurrentImage();
+    }
+
+    // Copy / Move Pop-Up Modal Logic
+    function openCopyMoveModal(mode = 'copy') {
+      const files = getSelectedFiles();
+      if (files.length === 0) {
+        showCustomDialog({
+          title: 'Pilih Foto Terlebih Dahulu',
+          message: 'Tidak ada foto yang terpilih untuk di-copy atau move.',
+          type: 'alert'
+        });
+        return;
+      }
+
+      const modal = document.getElementById('copy-move-modal');
+      const subtitle = document.getElementById('copy-move-modal-subtitle');
+      const filesList = document.getElementById('copy-move-files-list');
+      const quickSection = document.getElementById('copy-move-quick-access');
+      const quickList = document.getElementById('copy-move-quick-list');
+      const targetInput = document.getElementById('copy-move-target-folder');
+
+      setCopyMoveMode(mode);
+      subtitle.innerText = `${files.length} foto terpilih`;
+
+      filesList.innerHTML = files.map(f => `<div class="truncate text-zinc-300">📄 ${f}</div>`).join('');
+
+      if (!targetInput.value && state.hotkeys && state.hotkeys['1'] && state.hotkeys['1'].target) {
+        targetInput.value = state.hotkeys['1'].target;
+      }
+
+      const presets = [];
+      if (state.hotkeys) {
+        Object.entries(state.hotkeys).forEach(([k, v]) => {
+          if (v.target) presets.push({ label: `Preset ${k}`, target: v.target });
+        });
+      }
+      (state.pinned_folders || []).forEach(p => {
+        const name = p.split(/[\\/]/).filter(Boolean).pop() || p;
+        presets.push({ label: `Pin: ${name}`, target: p });
+      });
+
+      if (presets.length > 0) {
+        quickSection.classList.remove('hidden');
+        quickList.innerHTML = presets.map(p => {
+          const safe = p.target.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+          return `<button type="button" onclick="document.getElementById('copy-move-target-folder').value='${safe}'" class="px-2 py-1 bg-zinc-900 border border-brand-border hover:border-brand-blue hover:text-white rounded text-[10px] text-zinc-400 font-mono transition">${p.label}</button>`;
+        }).join('');
+      } else {
+        quickSection.classList.add('hidden');
+      }
+
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeCopyMoveModal() {
+      const modal = document.getElementById('copy-move-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function setCopyMoveMode(mode) {
+      state.copyMoveMode = mode;
+      const btnCopy = document.getElementById('btn-mode-copy');
+      const btnMove = document.getElementById('btn-mode-move');
+      const title = document.getElementById('copy-move-modal-title');
+      const icon = document.getElementById('copy-move-modal-icon');
+
+      if (mode === 'copy') {
+        btnCopy.className = 'py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition bg-brand-blue text-white shadow';
+        btnMove.className = 'py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition text-zinc-400 hover:text-white';
+        title.innerText = 'Copy (Salin) Foto';
+        icon.setAttribute('data-lucide', 'copy');
+      } else {
+        btnMove.className = 'py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition bg-brand-blue text-white shadow';
+        btnCopy.className = 'py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition text-zinc-400 hover:text-white';
+        title.innerText = 'Move (Pindah) Foto';
+        icon.setAttribute('data-lucide', 'arrow-right-left');
+      }
+      lucide.createIcons();
+    }
+
+    async function nativeBrowseFolder(initialDir = '') {
+      try {
+        const res = await fetch(`/api/browse-directory?initial_dir=${encodeURIComponent(initialDir)}`);
+        const data = await res.json();
+        if (data.status === 'success' && data.path) {
+          return data.path;
+        }
+      } catch (e) {
+        console.error("Native browse folder error:", e);
+      }
+      return '';
+    }
+
+    async function browseFolderForCopyMove() {
+      const targetInput = document.getElementById('copy-move-target-folder');
+      const initial = targetInput ? targetInput.value : '';
+      const path = await nativeBrowseFolder(initial);
+      if (path && targetInput) {
+        targetInput.value = path;
+      }
+    }
+
+    async function executeCopyMoveAction() {
+      const files = getSelectedFiles();
+      const targetFolder = document.getElementById('copy-move-target-folder').value.trim();
+      const conflict = document.getElementById('copy-move-conflict').value;
+      const mode = state.copyMoveMode || 'copy';
+
+      if (!targetFolder) {
+        showCustomDialog({
+          title: 'Pilih Direktori Tujuan',
+          message: 'Silakan pilih atau ketik direktori tujuan terlebih dahulu.',
+          type: 'alert'
+        });
+        return;
+      }
+
+      closeCopyMoveModal();
+
+      try {
+        logMsg(`Memproses ${mode.toUpperCase()} ${files.length} foto ke '${targetFolder}'...`);
+        const res = await fetch('/api/batch-action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: mode,
+            src_folder: state.currentFolder,
+            file_names: files,
+            target_folder: targetFolder,
+            resolve_conflict: conflict
+          })
+        });
+
+        const data = await res.json();
+        if (data.status === 'success') {
+          logMsg(`Berhasil ${mode.toUpperCase()} ${data.processed}/${files.length} foto ke '${targetFolder}'`, 'success');
+
+          if (mode === 'move') {
+            const movedFiles = new Set(data.results.filter(r => r.status === 'success').map(r => r.file_name));
+            state.images = state.images.filter(f => !movedFiles.has(f));
+            state.selectedIndices = [];
+            if (state.currentIndex >= state.images.length) {
+              state.currentIndex = Math.max(0, state.images.length - 1);
+            }
+          }
+
+          displayCurrentImage();
+        } else {
+          logMsg(`Gagal memproses batch action: ${data.detail || 'Error'}`, 'error');
+        }
+      } catch (e) {
+        logMsg(`Error saat mengeksekusi batch action: ${e}`, 'error');
+      }
+    }
 
     // Renders thumbnail gallery auto-adapting to bottom filmstrip vs sidebar vertical grid
     function renderImagePreviews() {
       const container = document.getElementById('tab-previews');
       if (!container) return;
 
-      document.getElementById('folder-item-count').innerText = `${state.images.length} items`;
+      const selCount = (state.selectedIndices || []).length;
+      document.getElementById('folder-item-count').innerText = `${state.images.length} items${selCount > 1 ? ' (' + selCount + ' terpilih)' : ''}`;
 
       if (state.images.length === 0) {
         container.innerHTML = `<div class="text-zinc-600 text-xs italic w-full text-center p-4">${t('lbl_no_images_in_folder')}</div>`;
         return;
       }
 
-      // Detect if Console is docked in a sidebar (left or right) vs bottom dock
       const consoleDock = state.layout?.docks?.console || 'bottom';
       const isSidebar = consoleDock === 'left' || consoleDock === 'right';
       const isHidden = container.classList.contains('hidden');
@@ -3143,7 +3695,7 @@
       }
 
       const thSize = state.thumbnail_size || 'medium';
-      let thumbPx = 240; // request size from /api/thumbnail
+      let thumbPx = 240;
       let cardClass = isSidebar ? 'h-32 w-full' : 'h-36 w-28';
       let textClass = 'text-[9px] mt-1.5';
       if (!isSidebar) {
@@ -3163,20 +3715,29 @@
 
         const card = document.createElement('div');
         const isActive = idx === state.currentIndex;
-        card.className = `${cardClass} shrink-0 rounded-lg border p-1.5 cursor-pointer flex flex-col justify-between transition group hover:scale-102 ${isActive ? 'bg-zinc-800 border-brand-blue' : 'bg-zinc-950 border-brand-border hover:border-zinc-700'
-          }`;
+        const isSelected = (state.selectedIndices || []).includes(idx);
+
+        card.className = `${cardClass} shrink-0 rounded-lg border p-1.5 cursor-pointer flex flex-col justify-between transition group hover:scale-102 relative ${
+          isSelected
+            ? 'bg-brand-blue/20 border-brand-blue ring-2 ring-brand-blue/60 shadow-lg'
+            : (isActive ? 'bg-zinc-800 border-brand-blue' : 'bg-zinc-950 border-brand-border hover:border-zinc-700')
+        }`;
         card.dataset.index = idx;
 
-        card.onclick = () => {
-          state.currentIndex = idx;
-          displayCurrentImage();
+        card.onclick = (e) => {
+          handleThumbnailClick(idx, e);
         };
 
-        // Create a skeleton placeholder that shows before the image loads
+        if (isSelected) {
+          const checkBadge = document.createElement('div');
+          checkBadge.className = 'absolute top-1.5 left-1.5 z-20 w-4 h-4 bg-brand-blue text-white rounded-full flex items-center justify-center text-[10px] font-bold shadow';
+          checkBadge.innerText = '✓';
+          card.appendChild(checkBadge);
+        }
+
         const imgWrapper = document.createElement('div');
         imgWrapper.className = 'w-full flex-1 overflow-hidden rounded bg-zinc-900 flex items-center justify-center relative min-h-0';
 
-        // Skeleton shimmer div (shown until image loads)
         const skeleton = document.createElement('div');
         skeleton.className = 'absolute inset-0 skeleton-shimmer';
         imgWrapper.appendChild(skeleton);
@@ -3207,7 +3768,7 @@
         imgWrapper.appendChild(thumbImg);
 
         const titleLabel = document.createElement('div');
-        titleLabel.className = `truncate text-zinc-400 group-hover:text-white font-mono ${textClass}`;
+        titleLabel.className = `truncate ${isSelected ? 'text-brand-blue font-bold' : 'text-zinc-400 group-hover:text-white'} font-mono ${textClass}`;
         titleLabel.innerText = filename;
         titleLabel.title = filename;
 
@@ -3346,6 +3907,9 @@
     async function executeAction(action, targetFolder = null) {
       if (state.currentIndex < 0 || state.currentIndex >= state.images.length) return;
       const filename = state.images[state.currentIndex];
+      const processedFile = filename;
+      const processedPath = `${state.currentFolder}/${processedFile}`;
+      const processedThumbUrl = `/api/thumbnail?path=${encodeURIComponent(processedPath)}&size=320`;
 
       const payload = {
         action: action,
@@ -3355,57 +3919,79 @@
         resolve_conflict: 'keep_both'
       };
 
-      try {
-        const res = await fetch('/api/action', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
+      const proceed = () => {
+        if (action === 'move' || action === 'delete') {
+          state.images.splice(state.currentIndex, 1);
+          if (state.currentIndex >= state.images.length) {
+            state.currentIndex = Math.max(0, state.images.length - 1);
+          }
+        } else if (action === 'copy') {
+          if (state.images.length > 0 && state.currentIndex < state.images.length - 1) {
+            state.currentIndex++;
+          }
+        }
 
+        displayCurrentImage();
+
+        // After navigation, update Prev card smoothly
+        if ((action === 'move' || action === 'copy') && state.images.length > 0) {
+          const imgPrev = document.getElementById('stage-prev-img');
+          const lblPrev = document.getElementById('stage-prev-label');
+          if (imgPrev) {
+            if (state.animations !== false) imgPrev.style.opacity = '0';
+            const ghostImg = new window.Image();
+            ghostImg.onload = () => {
+              imgPrev.src = processedThumbUrl;
+              imgPrev.style.opacity = '1';
+            };
+            ghostImg.onerror = () => {
+              imgPrev.src = `/api/image?path=${encodeURIComponent(processedPath)}`;
+              imgPrev.style.opacity = '1';
+            };
+            ghostImg.src = processedThumbUrl;
+            if (ghostImg.complete) {
+              imgPrev.src = processedThumbUrl;
+              imgPrev.style.opacity = '1';
+            }
+          }
+          if (lblPrev) {
+            lblPrev.innerText = processedFile;
+            lblPrev.title = processedFile;
+          }
+        }
+      };
+
+      // Perform optimistic stage advance immediately
+      if (state.animations !== false) {
+        const imgEl = document.getElementById('main-image');
+        const animClass = action === 'delete' ? 'animate-delete-out' : 'animate-move-out';
+        imgEl.classList.add(animClass);
+
+        setTimeout(() => {
+          proceed();
+          imgEl.classList.remove(animClass);
+          imgEl.classList.add('animate-image-in');
+          setTimeout(() => imgEl.classList.remove('animate-image-in'), 150);
+        }, 150);
+      } else {
+        proceed();
+      }
+
+      // Dispatch backend file operation asynchronously without blocking UI navigation
+      fetch('/api/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(async res => {
+        const data = await res.json();
         if (data.status === 'success') {
           logMsg(t('log_action_ok', { action: action.toUpperCase(), file: filename, target: targetFolder || 'Recycle Bin' }), 'success');
-
-          const proceed = () => {
-            if (action === 'move' || action === 'delete') {
-              state.images.splice(state.currentIndex, 1);
-              if (state.currentIndex >= state.images.length) {
-                state.currentIndex = Math.max(0, state.images.length - 1);
-              }
-            } else if (action === 'copy') {
-              if (state.images.length > 0 && state.currentIndex < state.images.length - 1) {
-                state.currentIndex++;
-              }
-            }
-
-            const imgPrev = document.getElementById('stage-prev-img');
-            const imgNext = document.getElementById('stage-next-img');
-            if (imgPrev) imgPrev.src = '';
-            if (imgNext) imgNext.src = '';
-
-            displayCurrentImage();
-          };
-
-          if (state.animations !== false) {
-            const imgEl = document.getElementById('main-image');
-            const animClass = action === 'delete' ? 'animate-delete-out' : 'animate-move-out';
-            imgEl.classList.add(animClass);
-
-            setTimeout(() => {
-              proceed();
-              imgEl.classList.remove(animClass);
-              imgEl.classList.add('animate-image-in');
-              setTimeout(() => imgEl.classList.remove('animate-image-in'), 200);
-            }, 220);
-          } else {
-            proceed();
-          }
         } else {
           logMsg(t('log_action_err', { err: data.detail }), 'error');
         }
-      } catch (e) {
+      }).catch(e => {
         logMsg(t('log_action_err', { err: e }), 'error');
-      }
+      });
     }
 
     async function deleteImage() {
@@ -3769,18 +4355,11 @@
 
     async function browsePresetFolder(key) {
       const current = document.getElementById(`set-target-${key}`).value;
-      showCustomDialog({
-        title: t('dlg_preset_title', { key }),
-        message: t('dlg_preset_msg'),
-        type: 'prompt',
-        defaultValue: current,
-        placeholder: 'Example: D:\\Photos\\Sports\\Output',
-        onOk: (path) => {
-          if (path) {
-            document.getElementById(`set-target-${key}`).value = path;
-          }
-        }
-      });
+      const path = await nativeBrowseFolder(current);
+      if (path) {
+        document.getElementById(`set-target-${key}`).value = path;
+        refreshConflictSummary();
+      }
     }
 
     // ============================================================
@@ -3908,15 +4487,13 @@
         browseBtn.className = 'px-2 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-white transition shrink-0';
         browseBtn.textContent = 'Browse';
         browseBtn.disabled = (item.action === 'delete');
-        browseBtn.onclick = () => {
-          showCustomDialog({
-            title: 'Folder Tujuan Custom Hotkey',
-            message: 'Tempel path absolut folder tujuan:',
-            type: 'prompt',
-            defaultValue: item.target || '',
-            placeholder: 'Contoh: D:\\Foto\\Terpilih',
-            onOk: (p) => { if (p) { item.target = p; targetIn.value = p; } }
-          });
+        browseBtn.onclick = async () => {
+          const path = await nativeBrowseFolder(item.target || '');
+          if (path) {
+            item.target = path;
+            targetIn.value = path;
+            refreshConflictSummary();
+          }
         };
 
         // ---- Delete row button ----
@@ -4141,21 +4718,48 @@
           });
           return;
         }
+        // 4. Ctrl+C / Ctrl+X / Ctrl+V for Copy/Move Modal
+        if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
+          const lKey = e.key.toLowerCase();
+          if (lKey === 'a') {
+            e.preventDefault();
+            selectAllPhotos();
+            return;
+          }
+          if (lKey === 'c') {
+            e.preventDefault();
+            openCopyMoveModal('copy');
+            return;
+          }
+          if (lKey === 'x') {
+            e.preventDefault();
+            openCopyMoveModal('move');
+            return;
+          }
+          if (lKey === 'v') {
+            e.preventDefault();
+            openCopyMoveModal('copy');
+            return;
+          }
+        }
       });
     }
 
+    function selectAllPhotos() {
+      if (!state.images || state.images.length === 0) return;
+      state.selectedIndices = state.images.map((_, idx) => idx);
+      if (state.currentIndex < 0 && state.images.length > 0) {
+        state.currentIndex = 0;
+      }
+      displayCurrentImage();
+      logMsg(`Memilih semua foto (${state.images.length} item terpilih)`);
+    }
 
     async function openSourceFolder() {
-      showCustomDialog({
-        title: 'Buka Folder Sumber',
-        message: 'Tempel path absolut direktori gambar Anda (dari File Explorer):',
-        type: 'prompt',
-        defaultValue: state.currentFolder,
-        placeholder: 'Contoh: D:\\Foto\\Basket',
-        onOk: (path) => {
-          if (path) navigateToPath(path);
-        }
-      });
+      const path = await nativeBrowseFolder(state.currentFolder);
+      if (path) {
+        navigateToPath(path);
+      }
     }
 
     // Resizer Panel Drag & Resize Engine
@@ -4187,6 +4791,7 @@
         resizerLeft.classList.remove('resizing');
         document.removeEventListener('mousemove', resizeLeft);
         document.removeEventListener('mouseup', stopResizeLeft);
+        saveSessionUI(); // persist panel size
       }
 
       resizerRight.addEventListener('mousedown', (e) => {
@@ -4210,6 +4815,7 @@
         resizerRight.classList.remove('resizing');
         document.removeEventListener('mousemove', resizeRight);
         document.removeEventListener('mouseup', stopResizeRight);
+        saveSessionUI(); // persist panel size
       }
 
       resizerBottom.addEventListener('mousedown', (e) => {
@@ -4231,6 +4837,7 @@
         resizerBottom.classList.remove('resizing');
         document.removeEventListener('mousemove', resizeBottom);
         document.removeEventListener('mouseup', stopResizeBottom);
+        saveSessionUI(); // persist panel size
       }
     }
   </script>

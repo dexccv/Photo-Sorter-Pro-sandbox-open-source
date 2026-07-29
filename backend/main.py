@@ -6,6 +6,7 @@ import json
 import base64
 import hashlib
 import time
+import concurrent.futures
 from io import BytesIO
 from typing import List, Dict, Optional
 from datetime import datetime
@@ -16,6 +17,8 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse, Res
 from pydantic import BaseModel
 from PIL import Image, ExifTags, ImageOps
 import send2trash
+import tkinter as tk
+from tkinter import filedialog
 
 from backend.mtp_helper import (
     is_mtp_path, get_mtp_drives, scan_mtp_dir, scan_mtp_images, get_mtp_file_local_path
@@ -54,9 +57,27 @@ def get_real_file_path(full_file_path: str) -> str:
 
 # In-memory thumbnail LRU cache: path -> (etag, jpeg_bytes, size_wh)
 _thumb_cache: Dict[str, tuple] = {}
-THUMB_CACHE_MAX = 300  # max entries
+THUMB_CACHE_MAX = 1000  # max entries in RAM
+
+# Background thread pool for pre-warming thumbnails (non-blocking)
+_prewarm_executor = concurrent.futures.ThreadPoolExecutor(max_workers=3, thread_name_prefix="prewarm")
 
 app = FastAPI(title="Modern Photo Sorter API")
+
+@app.on_event("startup")
+def setup_windows_asyncio_exception_handler():
+    if os.name == 'nt':
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            def win_handler(loop, context):
+                exc = context.get('exception')
+                if isinstance(exc, (ConnectionResetError, OSError)) and getattr(exc, 'winerror', None) == 10054:
+                    return  # Silence harmless Windows socket disconnection logs (WinError 10054)
+                loop.default_exception_handler(context)
+            loop.set_exception_handler(win_handler)
+        except Exception:
+            pass
 
 # Enable CORS for frontend development
 app.add_middleware(
@@ -91,6 +112,13 @@ class ActionPayload(BaseModel):
     target_folder: Optional[str] = None
     resolve_conflict: Optional[str] = "skip" # "overwrite", "keep_both", "skip"
 
+class BatchActionPayload(BaseModel):
+    action: str  # "move", "copy", "delete"
+    src_folder: str
+    file_names: List[str]
+    target_folder: Optional[str] = None
+    resolve_conflict: Optional[str] = "skip" # "overwrite", "keep_both", "skip"
+
 class CreateFolderPayload(BaseModel):
     parent_folder: str
     folder_name: str
@@ -112,6 +140,14 @@ import ctypes
 
 class PinnedFoldersPayload(BaseModel):
     pinned_folders: List[str]
+
+class PrewarmPayload(BaseModel):
+    paths: List[str]  # list of absolute image paths to pre-generate thumbnails for
+    size: Optional[int] = 320  # thumbnail size px
+
+class SessionUIPayload(BaseModel):
+    panel_sizes: Optional[Dict[str, int]] = None   # {left, right, bottom} in px
+    compare_mode: Optional[bool] = None            # compare mode toggle state
 
 class LayoutPayload(BaseModel):
     preset: Optional[str] = "standard"
@@ -144,7 +180,16 @@ session_data = {
         "show_left_sidebar": True,
         "show_right_panel": True,
         "show_bottom_panel": True
-    }
+    },
+    # Extended session fields
+    "recent_folders": [],          # list of last 10 opened folders
+    "panel_sizes": {               # resizable panel widths/heights in px
+        "left": 256,
+        "right": 256,
+        "bottom": 224
+    },
+    "per_folder_index": {},        # {folder_path: last_index} remembered per folder
+    "compare_mode": False          # whether Compare Mode was active
 }
 undo_stack = []
 
@@ -372,6 +417,48 @@ def get_thumbnail(request: Request, path: str = Query(...), size: int = Query(24
     except Exception as e:
         return FileResponse(real_path)
 
+def _generate_thumbnail_background(real_path: str, size: int):
+    """Worker function: generate thumbnail and store in cache. Safe to run in thread."""
+    try:
+        if not os.path.exists(real_path):
+            return
+        stat = os.stat(real_path)
+        cache_key = f"{real_path}:{size}:{stat.st_mtime}"
+        if cache_key in _thumb_cache:
+            return  # Already cached, nothing to do
+        with Image.open(real_path) as img:
+            img = ImageOps.exif_transpose(img)
+            if img.mode not in ("RGB", "L"):
+                img = img.convert("RGB")
+            img.thumbnail((size, size), Image.LANCZOS)
+            buf = BytesIO()
+            img.save(buf, format="JPEG", quality=75, optimize=True, progressive=True)
+            jpeg_bytes = buf.getvalue()
+        etag = f'"{hashlib.md5(cache_key.encode()).hexdigest()}"'
+        if len(_thumb_cache) >= THUMB_CACHE_MAX:
+            oldest_key = next(iter(_thumb_cache))
+            del _thumb_cache[oldest_key]
+        _thumb_cache[cache_key] = (etag, jpeg_bytes)
+    except Exception:
+        pass  # Silently ignore — this is best-effort pre-warming
+
+@app.post("/api/prewarm-thumbnails")
+def prewarm_thumbnails(payload: PrewarmPayload):
+    """Pre-generate thumbnails for a list of images in the background.
+    Returns immediately; actual generation happens in background threads."""
+    paths = payload.paths[:50]  # batch size up to 50 per request
+    size = max(80, min(payload.size or 320, 640))
+    queued = 0
+    for path in paths:
+        real_path = get_real_file_path(path)
+        if not real_path or not os.path.exists(real_path):
+            continue
+        cache_key = f"{real_path}:{size}:{os.stat(real_path).st_mtime}"
+        if cache_key not in _thumb_cache:
+            _prewarm_executor.submit(_generate_thumbnail_background, real_path, size)
+            queued += 1
+    return {"status": "queued", "count": queued}
+
 @app.get("/api/metadata")
 def get_metadata(path: str = Query(...)):
     """Extract EXIF data, image size, and compute histogram data"""
@@ -477,6 +564,101 @@ def execute_action(payload: ActionPayload):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+def _open_folder_dialog(initial_dir: Optional[str] = None) -> str:
+    try:
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        folder = filedialog.askdirectory(initialdir=initial_dir or None, title="Pilih Folder Tujuan / Directory")
+        root.destroy()
+        return folder
+    except Exception as e:
+        print(f"Error opening folder dialog: {e}")
+        return ""
+
+@app.get("/api/browse-directory")
+def browse_directory(initial_dir: Optional[str] = Query(None)):
+    """Open native Windows directory selection dialog"""
+    start_dir = resolve_path(initial_dir) if initial_dir else None
+    if start_dir and not os.path.exists(start_dir):
+        start_dir = None
+    selected_path = _open_folder_dialog(start_dir)
+    if selected_path:
+        norm_path = os.path.normpath(selected_path)
+        log_event("BROWSE", f"Selected folder via dialog: '{norm_path}'")
+        return {"status": "success", "path": norm_path}
+    return {"status": "cancelled", "path": ""}
+
+@app.post("/api/batch-action")
+def execute_batch_action(payload: BatchActionPayload):
+    """Move, copy, or delete multiple files at once"""
+    if not payload.file_names:
+        return {"status": "success", "processed": 0, "results": []}
+
+    action = payload.action
+    dst_folder = payload.target_folder
+    if action in ["move", "copy"] and not dst_folder:
+        raise HTTPException(status_code=400, detail="Target folder is required for move/copy")
+
+    if action in ["move", "copy"] and dst_folder:
+        os.makedirs(dst_folder, exist_ok=True)
+
+    results = []
+    processed_count = 0
+
+    for file_name in payload.file_names:
+        src_path = os.path.join(payload.payload_src_folder if hasattr(payload, 'payload_src_folder') else payload.src_folder, file_name)
+        if not os.path.exists(src_path):
+            results.append({"file_name": file_name, "status": "error", "message": "File not found"})
+            continue
+
+        try:
+            if action in ["move", "copy"]:
+                dst_path = os.path.join(dst_folder, file_name)
+                if os.path.exists(dst_path):
+                    if payload.resolve_conflict == "skip":
+                        results.append({"file_name": file_name, "status": "skipped", "message": "Conflict skipped"})
+                        continue
+                    elif payload.resolve_conflict == "keep_both":
+                        base, ext = os.path.splitext(file_name)
+                        counter = 1
+                        while True:
+                            new_name = f"{base}_{counter}{ext}"
+                            dst_path = os.path.join(dst_folder, new_name)
+                            if not os.path.exists(dst_path):
+                                break
+                            counter += 1
+
+                if action == "move":
+                    shutil.move(src_path, dst_path)
+                else:
+                    shutil.copy2(src_path, dst_path)
+
+                undo_stack.append({
+                    "action": action,
+                    "src": src_path,
+                    "dst": dst_path,
+                    "file_name": file_name
+                })
+                processed_count += 1
+                results.append({"file_name": file_name, "status": "success", "dst_path": dst_path})
+
+            elif action == "delete":
+                send2trash.send2trash(os.path.abspath(src_path))
+                undo_stack.append({
+                    "action": "delete",
+                    "src": src_path,
+                    "dst": None,
+                    "file_name": file_name
+                })
+                processed_count += 1
+                results.append({"file_name": file_name, "status": "success"})
+        except Exception as e:
+            results.append({"file_name": file_name, "status": "error", "message": str(e)})
+
+    log_event("BATCH", f"{action.upper()}: Processed {processed_count}/{len(payload.file_names)} files to '{dst_folder or 'trash'}'")
+    return {"status": "success", "processed": processed_count, "results": results}
+
 @app.post("/api/undo")
 def execute_undo():
     """Undo the last file action"""
@@ -573,7 +755,7 @@ def save_settings(payload: SettingsPayload):
 
 @app.get("/api/session")
 def get_session():
-    """Get active session details including last folder, last index, pinned folders, and layout"""
+    """Get active session details including last folder, last index, pinned folders, layout, and UI state"""
     last_folder = session_data.get("last_folder", "")
     folder_exists = os.path.exists(last_folder) and os.path.isdir(last_folder) if last_folder else False
     default_layout = {
@@ -584,6 +766,10 @@ def get_session():
         "show_right_panel": True,
         "show_bottom_panel": True
     }
+    # Filter recent_folders to only include folders that still exist on disk
+    recent = [f for f in session_data.get("recent_folders", []) if os.path.exists(f) and os.path.isdir(f)]
+    # Filter per_folder_index to valid folders only
+    pfi = {k: v for k, v in session_data.get("per_folder_index", {}).items() if os.path.exists(k)}
     return {
         "last_folder": last_folder if folder_exists else "",
         "last_index": session_data.get("last_index", 0),
@@ -591,7 +777,12 @@ def get_session():
         "hotkeys": session_data.get("hotkeys", {}),
         "theme": session_data.get("theme", "theme-black"),
         "lang": session_data.get("lang", "en"),
-        "layout": session_data.get("layout", default_layout)
+        "layout": session_data.get("layout", default_layout),
+        # Extended fields
+        "recent_folders": recent,
+        "panel_sizes": session_data.get("panel_sizes", {"left": 256, "right": 256, "bottom": 224}),
+        "per_folder_index": pfi,
+        "compare_mode": session_data.get("compare_mode", False)
     }
 
 @app.post("/api/session-layout")
@@ -612,9 +803,37 @@ def save_pinned_folders(payload: PinnedFoldersPayload):
 
 @app.post("/api/session-index")
 def save_session_index(folder: str = Query(...), index: int = Query(...)):
-    """Record current sorting index inside session"""
+    """Record current sorting index inside session, update per-folder index and recent folders"""
     session_data["last_folder"] = folder
     session_data["last_index"] = index
+
+    # Track per-folder last index
+    pfi = session_data.setdefault("per_folder_index", {})
+    pfi[folder] = index
+    # Cap per_folder_index at 50 entries to avoid unbounded growth
+    if len(pfi) > 50:
+        oldest_key = next(iter(pfi))
+        del pfi[oldest_key]
+
+    # Update recent_folders list (most recent first, deduped, max 10)
+    recent = session_data.setdefault("recent_folders", [])
+    if folder in recent:
+        recent.remove(folder)
+    recent.insert(0, folder)
+    session_data["recent_folders"] = recent[:10]
+
+    save_session()
+    return {"status": "success"}
+
+@app.post("/api/session-ui")
+def save_session_ui(payload: SessionUIPayload):
+    """Save UI state: panel sizes and compare mode"""
+    if payload.panel_sizes is not None:
+        current = session_data.setdefault("panel_sizes", {"left": 256, "right": 256, "bottom": 224})
+        current.update(payload.panel_sizes)
+        session_data["panel_sizes"] = current
+    if payload.compare_mode is not None:
+        session_data["compare_mode"] = payload.compare_mode
     save_session()
     return {"status": "success"}
 
