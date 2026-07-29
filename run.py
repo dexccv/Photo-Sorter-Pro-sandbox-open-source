@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
     print(f"{CYAN}┌────────────────────────────────────────────────────────┐{RESET}")
     print(f"{CYAN}│{RESET}  {BOLD}{PURPLE}PHOTO SORTER PRO{RESET}                                      {CYAN}│{RESET}")
-    print(f"{CYAN}│{RESET}  {DIM}Elite Sandbox Edition v2.5{RESET}                             {CYAN}│{RESET}")
+    print(f"{CYAN}│{RESET}  {DIM}Elite Sandbox Edition v2.5{RESET}                            {CYAN}│{RESET}")
     print(f"{CYAN}│{RESET}  {BOLD}{YELLOW}Created by:{RESET} {BOLD}{CYAN}dexccv{RESET} ({BLUE}https://github.com/dexccv{RESET})        {CYAN}│{RESET}")
     print(f"{CYAN}├────────────────────────────────────────────────────────┤{RESET}")
     print(f"{CYAN}│{RESET}  {BOLD}{GREEN}[STATUS]{RESET}   Backend server started successfully.       {CYAN}│{RESET}")
