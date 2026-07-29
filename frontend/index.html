@@ -1,0 +1,4183 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photo Sorter Pro - Elite Edition</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Outfit & Space Grotesk -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+            mono: ['Space Grotesk', 'monospace'],
+          },
+          colors: {
+            brand: {
+              black: 'var(--bg-main)',
+              panel: 'var(--bg-panel)',
+              border: 'var(--bg-border)',
+              blue: 'var(--color-accent)',
+              accent: 'var(--color-accent-hover)',
+              success: '#10b981',
+              danger: '#ef4444'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg-main: #09090b;
+      --bg-panel: #141416;
+      --bg-border: #27272a;
+      --color-accent: #3b82f6;
+      --color-accent-hover: #60a5fa;
+    }
+
+    .theme-midnight {
+      --bg-main: #0b0f19;
+      --bg-panel: #111827;
+      --bg-border: #1f2937;
+      --color-accent: #ec4899;
+      --color-accent-hover: #f472b6;
+    }
+
+    .theme-emerald {
+      --bg-main: #022c22;
+      --bg-panel: #064e3b;
+      --bg-border: #0f766e;
+      --color-accent: #10b981;
+      --color-accent-hover: #34d399;
+    }
+
+    .theme-cyberpunk {
+      --bg-main: #080510;
+      --bg-panel: #140e28;
+      --bg-border: #2c1a4d;
+      --color-accent: #d946ef;
+      --color-accent-hover: #f472b6;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: #f4f4f5;
+      overflow: hidden;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-panel);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3b82f6;
+    }
+
+    /* Drag Dividers styling */
+    .resizer-h {
+      width: 4px;
+      cursor: col-resize;
+      transition: background 0.2s;
+    }
+
+    .resizer-h:hover,
+    .resizer-h.resizing {
+      background: #3b82f6;
+    }
+
+    .resizer-v {
+      height: 4px;
+      cursor: row-resize;
+      transition: background 0.2s;
+    }
+
+    .resizer-v:hover,
+    .resizer-v.resizing {
+      background: #3b82f6;
+    }
+
+    /* Animation Keyframes */
+    @keyframes slideOutRight {
+      from {
+        transform: translateX(0) scale(1);
+        opacity: 1;
+        filter: blur(0);
+      }
+
+      to {
+        transform: translateX(40px) scale(0.95);
+        opacity: 0;
+        filter: blur(4px);
+      }
+    }
+
+    @keyframes slideInLeft {
+      from {
+        transform: translateX(-30px) scale(0.95);
+        opacity: 0;
+        filter: blur(4px);
+      }
+
+      to {
+        transform: translateX(0) scale(1);
+        opacity: 1;
+        filter: blur(0);
+      }
+    }
+
+    @keyframes shrinkOut {
+      from {
+        transform: scale(1);
+        opacity: 1;
+      }
+
+      to {
+        transform: scale(0.85);
+        opacity: 0;
+      }
+    }
+
+    .animate-move-out {
+      animation: slideOutRight 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    .animate-delete-out {
+      animation: shrinkOut 0.18s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    .animate-image-in {
+      animation: slideInLeft 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    /* Skeleton shimmer for thumbnail placeholders */
+    @keyframes shimmer {
+      0% {
+        background-position: -400px 0;
+      }
+
+      100% {
+        background-position: 400px 0;
+      }
+    }
+
+    .skeleton-shimmer {
+      background: linear-gradient(90deg, #18181b 25%, #27272a 50%, #18181b 75%);
+      background-size: 800px 100%;
+      animation: shimmer 1.4s infinite linear;
+    }
+
+    /* ---- iOS-style Toggle Switch ---- */
+    .toggle-sw { position: relative; display: inline-flex; width: 34px; height: 19px; flex-shrink: 0; }
+    .toggle-sw input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-sw .slider { position: absolute; cursor: pointer; inset: 0;
+      background: #3f3f46; border-radius: 19px; transition: background .18s; }
+    .toggle-sw .slider:before { content: ''; position: absolute;
+      width: 13px; height: 13px; left: 3px; bottom: 3px;
+      background: #fff; border-radius: 50%; transition: transform .18s;
+      box-shadow: 0 1px 3px #0004; }
+    .toggle-sw input:checked + .slider { background: var(--color-accent); }
+    .toggle-sw input:checked + .slider:before { transform: translateX(15px); }
+    .toggle-sw input:disabled + .slider { opacity: .4; cursor: not-allowed; }
+
+    /* ---- Shortcut row disabled visual ---- */
+    .shortcut-row-disabled { opacity: 0.42; }
+    .shortcut-row-disabled .key-badge { text-decoration: line-through; }
+
+    /* ---- Conflict badges ---- */
+    .conflict-badge { display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; font-weight: 600; border-radius: 6px;
+      padding: 2px 7px; line-height: 1.6; }
+    .conflict-critical { background: #450a0a; color: #f87171; border: 1px solid #7f1d1d; }
+    .conflict-warning  { background: #431407; color: #fb923c; border: 1px solid #7c2d12; }
+    .conflict-info     { background: #1c1917; color: #a8a29e; border: 1px solid #44403c; }
+    .conflict-app      { background: #1e1b4b; color: #a5b4fc; border: 1px solid #3730a3; }
+    .conflict-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; padding-left: 4px; }
+  </style>
+</head>
+
+<script>
+  // Polyfill requestIdleCallback for environments that don't support it
+  window.requestIdleCallback = window.requestIdleCallback || function (cb, opts) {
+    const start = Date.now();
+    return setTimeout(function () {
+      cb({ didTimeout: false, timeRemaining: function () { return Math.max(0, 50 - (Date.now() - start)); } });
+    }, opts && opts.timeout ? Math.min(opts.timeout, 1) : 1);
+  };
+</script>
+
+<body class="h-full flex flex-col antialiased">
+
+  <!-- TOP HEADER (Control Bar) -->
+  <header class="h-14 border-b border-brand-border bg-brand-panel flex items-center justify-between px-6 z-10">
+    <div class="flex items-center gap-3">
+      <div
+        class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-blue to-purple-600 flex items-center justify-center shadow-lg shadow-brand-blue/20">
+        <i data-lucide="image" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm font-semibold tracking-wider bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent" data-i18n="title">PHOTO SORTER PRO</h1>
+          <a href="https://github.com/dexccv" target="_blank" rel="noopener noreferrer" class="text-[9px] font-mono bg-purple-950/80 hover:bg-purple-900 border border-purple-800 text-purple-300 px-2 py-0.5 rounded-full transition flex items-center gap-1 shadow-sm">
+            <i data-lucide="github" class="w-3 h-3 text-purple-400"></i> by dexccv
+          </a>
+        </div>
+        <p class="text-[10px] text-zinc-500 font-mono tracking-widest leading-none mt-0.5" data-i18n="subtitle">ELITE SANDBOX v2.5</p>
+      </div>
+    </div>
+
+    <!-- Menu Controls & Status -->
+    <div class="flex items-center gap-3 text-xs">
+      <!-- Layout Preset Selector & Custom Docking Switcher -->
+      <div class="relative">
+        <button id="btn-layout-menu" onclick="toggleLayoutDropdown(event)"
+          class="px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-brand-border hover:border-brand-blue text-xs text-zinc-300 flex items-center gap-1.5 transition">
+          <i data-lucide="layout-template" class="w-4 h-4 text-brand-blue"></i>
+          <span class="font-medium hidden md:inline">Layout</span>
+          <i data-lucide="chevron-down" class="w-3 h-3 text-zinc-500"></i>
+        </button>
+        <!-- Layout Menu Dropdown -->
+        <div id="layout-dropdown" class="hidden absolute right-0 mt-2 w-64 bg-zinc-950 border border-brand-border rounded-xl shadow-2xl p-2.5 z-50 flex flex-col gap-1.5">
+          <div class="text-[10px] font-semibold uppercase text-zinc-400 px-2 py-0.5 tracking-wider">Layout Presets</div>
+          <button onclick="applyLayoutPreset('standard')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-zinc-800 text-xs text-zinc-300 flex items-center justify-between group transition">
+            <span class="flex items-center gap-2"><i data-lucide="columns-3" class="w-4 h-4 text-brand-blue"></i> Standard Dual Sidebar</span>
+            <span class="text-[9px] bg-zinc-900 border border-brand-border px-1.5 py-0.5 rounded text-zinc-400 font-mono">Default</span>
+          </button>
+          <button onclick="applyLayoutPreset('comparison')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-zinc-800 text-xs text-zinc-300 flex items-center justify-between group transition">
+            <span class="flex items-center gap-2"><i data-lucide="layout-grid" class="w-4 h-4 text-purple-400"></i> 3-Photo Stage Studio</span>
+            <span class="text-[9px] bg-purple-950/80 border border-purple-900 px-1.5 py-0.5 rounded text-purple-300 font-mono">Compare</span>
+          </button>
+          <button onclick="applyLayoutPreset('right_presets')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-zinc-800 text-xs text-zinc-300 flex items-center justify-between group transition">
+            <span class="flex items-center gap-2"><i data-lucide="panel-right" class="w-4 h-4 text-amber-400"></i> Right Presets Dock</span>
+            <span class="text-[9px] bg-amber-950/80 border border-amber-900 px-1.5 py-0.5 rounded text-amber-300 font-mono">Dock</span>
+          </button>
+          <button onclick="applyLayoutPreset('minimal')" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-zinc-800 text-xs text-zinc-300 flex items-center justify-between group transition">
+            <span class="flex items-center gap-2"><i data-lucide="maximize-2" class="w-4 h-4 text-emerald-400"></i> Minimal Stage Focus</span>
+            <span class="text-[9px] bg-emerald-950/80 border border-emerald-900 px-1.5 py-0.5 rounded text-emerald-300 font-mono">Clean</span>
+          </button>
+
+          <div class="h-px bg-brand-border my-1"></div>
+          <div class="text-[10px] font-semibold uppercase text-zinc-400 px-2 py-0.5 tracking-wider">Free Panel Docking Sandbox</div>
+          
+          <div class="px-2 py-1 flex items-center justify-between text-xs text-zinc-300">
+            <span class="flex items-center gap-1.5"><i data-lucide="folder-search" class="w-3.5 h-3.5 text-brand-blue"></i> Explorer:</span>
+            <select onchange="setWidgetDock('explorer', this.value)" id="sel-dock-explorer" class="bg-zinc-900 border border-brand-border rounded px-1.5 py-0.5 text-xs text-zinc-300 outline-none font-mono focus:border-brand-blue">
+              <option value="left">Left Sidebar</option>
+              <option value="right">Right Sidebar</option>
+              <option value="bottom">Bottom Panel</option>
+              <option value="hidden">Hidden</option>
+            </select>
+          </div>
+
+          <div class="px-2 py-1 flex items-center justify-between text-xs text-zinc-300">
+            <span class="flex items-center gap-1.5"><i data-lucide="info" class="w-3.5 h-3.5 text-purple-400"></i> Inspector:</span>
+            <select onchange="setWidgetDock('inspector', this.value)" id="sel-dock-inspector" class="bg-zinc-900 border border-brand-border rounded px-1.5 py-0.5 text-xs text-zinc-300 outline-none font-mono focus:border-brand-blue">
+              <option value="left">Left Sidebar</option>
+              <option value="right">Right Sidebar</option>
+              <option value="bottom">Bottom Panel</option>
+              <option value="hidden">Hidden</option>
+            </select>
+          </div>
+
+          <div class="px-2 py-1 flex items-center justify-between text-xs text-zinc-300">
+            <span class="flex items-center gap-1.5"><i data-lucide="layout-panel-left" class="w-3.5 h-3.5 text-amber-400"></i> Console:</span>
+            <select onchange="setWidgetDock('console', this.value)" id="sel-dock-console" class="bg-zinc-900 border border-brand-border rounded px-1.5 py-0.5 text-xs text-zinc-300 outline-none font-mono focus:border-brand-blue">
+              <option value="left">Left Sidebar</option>
+              <option value="right">Right Sidebar</option>
+              <option value="bottom">Bottom Panel</option>
+              <option value="hidden">Hidden</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick View Toggles -->
+      <div class="flex items-center gap-1 bg-zinc-900/80 p-1 rounded-lg border border-brand-border">
+        <button onclick="togglePanel('left')"
+          class="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-400 hover:text-white transition"
+          title="Toggle Explorer [Ctrl+L]">
+          <i data-lucide="folder-search" class="w-4 h-4"></i>
+        </button>
+        <button onclick="togglePanel('bottom')"
+          class="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-400 hover:text-white transition"
+          title="Toggle Previews/Console [Ctrl+B]">
+          <i data-lucide="layout-panel-left" class="w-4 h-4"></i>
+        </button>
+        <button onclick="togglePanel('right')"
+          class="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-400 hover:text-white transition"
+          title="Toggle Metadata [Ctrl+R]">
+          <i data-lucide="info" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <button onclick="openSettingsModal()"
+        class="px-3 py-1.5 rounded-lg border border-brand-border bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white flex items-center gap-2 transition">
+        <i data-lucide="settings" class="w-4 h-4"></i>
+        <span data-i18n="settings">Settings</span>
+      </button>
+      <button onclick="showHelpModal()"
+        class="px-3 py-1.5 rounded-lg bg-brand-blue hover:bg-brand-blue/80 text-white font-medium flex items-center gap-2 shadow-lg shadow-brand-blue/10 transition">
+        <i data-lucide="help-circle" class="w-4 h-4"></i>
+        <span data-i18n="help">Help [F1]</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="flex-1 flex overflow-hidden relative" id="workspace">
+
+    <!-- 1. LEFT SIDEBAR (Explorer Tree) -->
+    <aside class="w-64 flex flex-col bg-brand-panel border-r border-brand-border shrink-0 select-none font-sans"
+      id="left-panel">
+      
+      <div id="widget-explorer" class="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div class="p-4 border-b border-brand-border flex items-center justify-between shrink-0">
+          <div class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-brand-accent">
+            <i data-lucide="folder-search" class="w-4 h-4"></i>
+            <span data-i18n="lbl_explorer">Explorer</span>
+          </div>
+          <button onclick="openSourceFolder()"
+            class="text-[10px] bg-zinc-800 hover:bg-brand-blue hover:text-white px-2 py-1 rounded transition"
+            data-i18n="lbl_open_folder">Open Folder</button>
+        </div>
+
+        <!-- Pinned Folders Section (Quick Access / Pin to Start) -->
+        <div class="px-3 py-2 border-b border-brand-border shrink-0" id="pinned-sidebar-section">
+          <div class="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider mb-1.5">
+            <span class="flex items-center gap-1.5 text-brand-accent">
+              <i data-lucide="pin" class="w-3.5 h-3.5"></i> Pin to Start
+            </span>
+            <span class="text-[9px] bg-zinc-900 border border-brand-border px-1.5 py-0.5 rounded-full text-zinc-400 font-mono" id="pinned-count">0</span>
+          </div>
+          <div class="space-y-1 max-h-36 overflow-y-auto" id="pinned-sidebar-list">
+            <!-- Loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- Roots / Drives selector header -->
+        <div class="px-3 pt-2 pb-1 flex items-center justify-between shrink-0">
+          <span class="text-[10px] uppercase font-semibold text-zinc-500 tracking-wider">Drive List</span>
+          <button onclick="loadThisPC()" class="text-[10px] text-brand-blue hover:underline flex items-center gap-1">
+            <i data-lucide="monitor" class="w-3 h-3"></i> This PC
+          </button>
+        </div>
+
+        <div class="px-3 pb-2 shrink-0">
+          <select id="drive-selector" onchange="loadDrive(this.value)"
+            class="w-full text-xs bg-zinc-900 border border-brand-border rounded p-1 text-zinc-300 font-mono outline-none">
+            <!-- Drives loaded dynamically -->
+          </select>
+        </div>
+
+        <!-- Hierarchical Directory Tree -->
+        <div class="flex-1 overflow-y-auto px-2 py-1 min-h-0" id="directory-tree">
+          <!-- Tree list loaded dynamically -->
+        </div>
+      </div>
+    </aside>
+
+    <!-- Horizontal Resizer (Left <-> Center) -->
+    <div class="resizer-h bg-brand-border" id="resizer-left"></div>
+
+    <!-- 2. CENTER ZONE (Viewer & Bottom Console) -->
+    <section class="flex-1 flex flex-col overflow-hidden min-w-0" id="center-panel">
+
+      <!-- File Explorer Breadcrumbs / Address Bar -->
+      <div class="h-11 border-b border-brand-border bg-zinc-950 flex items-center gap-2 px-4 shrink-0">
+        <div class="flex items-center gap-1">
+          <button onclick="goBack()"
+            class="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition disabled:opacity-40"
+            id="btn-back" title="Back">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          </button>
+          <button onclick="goUp()" class="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition"
+            id="btn-up" title="Folder Up">
+            <i data-lucide="arrow-up" class="w-4 h-4"></i>
+          </button>
+          <button onclick="loadThisPC()" class="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition"
+            id="btn-this-pc" title="This PC / Disk Overview">
+            <i data-lucide="monitor" class="w-4 h-4"></i>
+          </button>
+          <button onclick="refreshFolder()"
+            class="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition" title="Refresh">
+            <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Address Bar Input -->
+        <div class="flex-1 relative flex items-center">
+          <i data-lucide="folder" class="w-3.5 h-3.5 text-zinc-500 absolute left-3"></i>
+          <input type="text" id="address-bar" 
+            onkeydown="if(event.key==='Enter'){ event.preventDefault(); navigateToAddress(); }"
+            class="w-full pl-9 pr-16 py-1 text-xs bg-zinc-900 border border-brand-border rounded-md outline-none focus:border-brand-blue font-mono text-zinc-300"
+            placeholder="Path direktori...">
+          <!-- Go & Pin Buttons inside Address Bar -->
+          <div class="absolute right-1.5 flex items-center gap-1">
+            <button onclick="togglePinCurrentFolder()" id="btn-pin-folder"
+              class="p-1 rounded hover:bg-zinc-800 text-zinc-500 hover:text-brand-blue transition"
+              title="Pin folder ini ke Quick Access / Start">
+              <i data-lucide="pin" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="navigateToAddress()"
+              class="p-1 rounded bg-brand-blue/20 hover:bg-brand-blue text-brand-blue hover:text-white transition"
+              title="Pergi ke Path (Enter)">
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+        <button onclick="createNewFolder()"
+          class="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white flex items-center gap-1 transition"
+          title="Buat Folder Baru [Ctrl+N]">
+          <i data-lucide="folder-plus" class="w-4 h-4"></i>
+          <span class="text-xs" data-i18n="lbl_new">New</span>
+        </button>
+      </div>
+
+      <!-- Viewer & Console Split (Vertical Paned) -->
+      <div class="flex-1 flex flex-col overflow-hidden min-h-0" id="mid-vertical-split">
+
+        <!-- Viewer Container -->
+        <div class="flex-1 bg-black relative flex items-center justify-center p-3 min-h-0 overflow-hidden" id="viewer-container">
+          
+          <!-- 3-Photo Carousel Stage Container -->
+          <div id="carousel-stage" class="w-full h-full flex items-center justify-between gap-3 overflow-hidden relative">
+            
+            <!-- Left Stage Card: Previous Image -->
+            <div id="stage-card-prev" onclick="prevImage()"
+              class="w-1/5 max-w-[240px] h-auto max-h-[82vh] self-center bg-zinc-950/80 border border-zinc-700/80 hover:border-brand-blue rounded-xl p-2 flex flex-col items-center cursor-pointer transition-all duration-300 opacity-60 hover:opacity-100 hover:scale-102 group shrink-0 relative select-none shadow-2xl">
+              <div class="absolute top-3 left-3 z-10 px-2 py-0.5 rounded-full bg-black/85 backdrop-blur text-[10px] text-zinc-300 font-mono flex items-center gap-1 group-hover:text-brand-blue border border-white/20 shadow-md">
+                <i data-lucide="chevron-left" class="w-3 h-3"></i> Prev
+              </div>
+              <div class="w-full flex items-center justify-center overflow-hidden rounded-lg relative my-1 min-h-0">
+                <img id="stage-prev-img" src="" alt="" class="max-w-full max-h-[65vh] object-contain rounded-md pointer-events-none transition duration-200">
+              </div>
+              <div id="stage-prev-label" class="text-[10px] font-mono text-zinc-400 truncate w-full text-center group-hover:text-white px-1 pt-1">-</div>
+            </div>
+
+            <!-- Center Active Photo Stage Card -->
+            <div id="stage-card-main" class="flex-1 h-full flex items-center justify-center relative min-w-0">
+              <img id="main-image" src="" alt=""
+                class="max-w-full max-h-full object-contain rounded-md shadow-2xl transition duration-200 hide select-none">
+            </div>
+
+            <!-- Right Stage Card: Next Image -->
+            <div id="stage-card-next" onclick="nextImage()"
+              class="w-1/5 max-w-[240px] h-auto max-h-[82vh] self-center bg-zinc-950/80 border border-zinc-700/80 hover:border-brand-blue rounded-xl p-2 flex flex-col items-center cursor-pointer transition-all duration-300 opacity-60 hover:opacity-100 hover:scale-102 group shrink-0 relative select-none shadow-2xl">
+              <div class="absolute top-3 right-3 z-10 px-2 py-0.5 rounded-full bg-black/85 backdrop-blur text-[10px] text-zinc-300 font-mono flex items-center gap-1 group-hover:text-brand-blue border border-white/20 shadow-md">
+                Next <i data-lucide="chevron-right" class="w-3 h-3"></i>
+              </div>
+              <div class="w-full flex items-center justify-center overflow-hidden rounded-lg relative my-1 min-h-0">
+                <img id="stage-next-img" src="" alt="" class="max-w-full max-h-[65vh] object-contain rounded-md pointer-events-none transition duration-200">
+              </div>
+              <div id="stage-next-label" class="text-[10px] font-mono text-zinc-400 truncate w-full text-center group-hover:text-white px-1 pt-1">-</div>
+            </div>
+          </div>
+
+          <!-- Image Controls Overlay -->
+          <div
+            class="absolute bottom-4 flex items-center gap-2 bg-zinc-950/90 backdrop-blur-md border border-brand-border px-3.5 py-1.5 rounded-xl shadow-2xl z-10">
+            <button onclick="prevImage()"
+              class="p-1 rounded hover:bg-zinc-800 text-zinc-300 hover:text-white transition" title="Foto Sebelumnya"><i
+                data-lucide="chevron-left" class="w-5 h-5"></i></button>
+            <span class="text-xs font-mono text-zinc-400 px-2" id="image-counter">0 / 0</span>
+            <button onclick="nextImage()"
+              class="p-1 rounded hover:bg-zinc-800 text-zinc-300 hover:text-white transition" title="Foto Selanjutnya"><i
+                data-lucide="chevron-right" class="w-5 h-5"></i></button>
+            <div class="w-px h-4 bg-brand-border"></div>
+            <button onclick="toggleStageCarousel()" id="btn-toggle-carousel"
+              class="px-2 py-1 rounded hover:bg-zinc-800 text-zinc-300 hover:text-white flex items-center gap-1.5 transition border border-transparent"
+              title="Toggle 3-Photo Carousel Compare Mode">
+              <i data-lucide="columns-3" class="w-4 h-4 text-brand-blue"></i>
+              <span class="text-[11px] font-medium hidden sm:inline" id="lbl-carousel-mode">Compare Mode</span>
+            </button>
+            <div class="w-px h-4 bg-brand-border"></div>
+            <button onclick="rotateImage(-90)"
+              class="p-1.5 rounded hover:bg-zinc-800 text-zinc-300 hover:text-white transition"
+              title="Rotate Left [L]"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></button>
+            <button onclick="rotateImage(90)"
+              class="p-1.5 rounded hover:bg-zinc-800 text-zinc-300 hover:text-white transition"
+              title="Rotate Right [R]"><i data-lucide="rotate-cw" class="w-4 h-4"></i></button>
+            <div class="w-px h-4 bg-brand-border"></div>
+            <button onclick="deleteImage()"
+              class="p-1.5 rounded hover:bg-red-950/50 hover:text-brand-danger text-zinc-400 transition"
+              title="Trash [Del]"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
+
+          <!-- Empty State Overlay -->
+          <div id="empty-state" class="flex flex-col items-center gap-3 text-zinc-500 max-w-sm text-center">
+            <i data-lucide="images" class="w-12 h-12 text-zinc-600 animate-pulse"></i>
+            <h3 class="font-medium text-sm text-zinc-400" data-i18n="lbl_no_image">No image selected</h3>
+            <p class="text-xs leading-relaxed" data-i18n="lbl_no_image_desc">Please select a source folder in the
+              explorer or type a path in the address bar to scan files.</p>
+          </div>
+
+          <!-- This PC Dashboard View (Shows when no folder is open or navigating to This PC) -->
+          <div id="this-pc-container" class="absolute inset-0 bg-brand-black p-6 overflow-y-auto hidden flex flex-col gap-6 z-20">
+            <div class="flex items-center justify-between border-b border-brand-border pb-3">
+              <div class="flex items-center gap-3">
+                <div class="p-2.5 rounded-xl bg-zinc-900 border border-brand-border text-brand-blue">
+                  <i data-lucide="monitor" class="w-6 h-6"></i>
+                </div>
+                <div>
+                  <h2 class="text-base font-semibold text-white tracking-wide">This PC (Komputer Ini)</h2>
+                  <p class="text-xs text-zinc-400">Pilih drive internal atau penyimpanan eksternal (USB/Flashdisk) untuk mulai sortir foto</p>
+                </div>
+              </div>
+              <button onclick="fetchDrives()" class="px-3 py-1.5 rounded-lg bg-zinc-900 border border-brand-border hover:bg-zinc-800 text-xs text-zinc-300 flex items-center gap-1.5 transition">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh Drives
+              </button>
+            </div>
+
+            <!-- Drive Cards Grid -->
+            <div>
+              <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Penyimpanan Terdeteksi</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="drives-grid">
+                <!-- Loaded dynamically -->
+              </div>
+            </div>
+
+            <!-- Quick Access / Pinned Folders in Main View -->
+            <div>
+              <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <i data-lucide="pin" class="w-3.5 h-3.5 text-brand-accent"></i> Pin to Start / Akses Cepat
+              </h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3" id="pinned-grid">
+                <!-- Loaded dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vertical Resizer (Viewer <-> Bottom Console) -->
+        <div class="resizer-v bg-brand-border" id="resizer-bottom"></div>
+
+        <!-- Bottom Panel (Console Logs & Previews) -->
+        <div class="h-56 bg-brand-panel flex flex-col border-t border-brand-border shrink-0 min-h-0" id="bottom-panel">
+          <div id="widget-console" class="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
+            <!-- Tab header -->
+            <div class="flex items-center justify-between border-b border-brand-border px-4 bg-zinc-950 shrink-0 h-9">
+              <div class="flex gap-2">
+                <button onclick="setBottomTab('previews')" id="tab-btn-previews"
+                  class="text-xs px-3 py-1.5 border-b-2 border-brand-blue font-medium text-white transition flex items-center gap-1.5">
+                  <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+                  <span data-i18n="tab_previews">Folder Contents</span>
+                </button>
+                <button onclick="setBottomTab('logs')" id="tab-btn-logs"
+                  class="text-xs px-3 py-1.5 border-b-2 border-transparent font-medium text-zinc-400 hover:text-white transition flex items-center gap-1.5">
+                  <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
+                  <span data-i18n="tab_logs">Activity Log</span>
+                </button>
+                <button onclick="setBottomTab('presets')" id="tab-btn-presets"
+                  class="text-xs px-3 py-1.5 border-b-2 border-transparent font-medium text-zinc-400 hover:text-white transition flex items-center gap-1.5">
+                  <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                  <span data-i18n="tab_presets">Presets (1-9)</span>
+                </button>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-[10px] text-zinc-500 font-mono" id="folder-item-count">0 items</span>
+                <button onclick="clearLogs()" id="btn-clear-logs"
+                  class="text-[10px] text-zinc-500 hover:text-white font-mono uppercase tracking-wider hidden">Clean
+                  Log</button>
+              </div>
+            </div>
+
+            <!-- Tab Contents -->
+            <div class="flex-1 overflow-hidden relative bg-brand-black min-h-0">
+              <!-- Previews Panel (Horizontal scroll gallery) -->
+              <div id="tab-previews" class="absolute inset-0 overflow-x-auto p-4 flex gap-4 items-center">
+                <!-- Thumbnail cards loaded dynamically -->
+              </div>
+
+              <!-- Logs Panel -->
+              <div id="tab-logs"
+                class="absolute inset-0 overflow-y-auto p-3 font-mono text-[11px] leading-relaxed select-text space-y-1 hidden">
+                <!-- Logs printed dynamically -->
+              </div>
+
+              <!-- Quick Presets Panel -->
+              <div id="tab-presets" class="absolute inset-0 overflow-y-auto p-4 hidden">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="presets-grid">
+                  <!-- Preset buttons loaded dynamically -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- Horizontal Resizer (Center <-> Right) -->
+    <div class="resizer-h bg-brand-border" id="resizer-right"></div>
+
+    <!-- 3. RIGHT SIDEBAR (EXIF, Histogram, Details) -->
+    <aside class="w-64 flex flex-col bg-brand-panel border-l border-brand-border shrink-0 select-none" id="right-panel">
+      <div id="widget-inspector" class="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div class="p-4 border-b border-brand-border flex items-center gap-1.5 shrink-0">
+          <i data-lucide="bar-chart-3" class="w-4 h-4 text-brand-accent"></i>
+          <span class="text-xs font-semibold uppercase tracking-wider text-brand-accent" data-i18n="lbl_metadata">Image Info</span>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4 space-y-6 min-h-0">
+
+          <!-- Live Histogram -->
+          <div>
+            <h3 class="text-xs font-medium text-zinc-400 mb-2" data-i18n="lbl_histogram">Histogram Curve</h3>
+            <div
+              class="w-full h-28 bg-zinc-950 rounded-lg border border-brand-border relative overflow-hidden flex items-end">
+              <canvas id="histogram-canvas" class="w-full h-full"></canvas>
+            </div>
+          </div>
+
+          <!-- EXIF Camera Meta -->
+          <div>
+            <h3 class="text-xs font-medium text-zinc-400 mb-2" data-i18n="meta_camera_exif">Camera EXIF</h3>
+            <div class="bg-zinc-950 rounded-lg border border-brand-border p-3 space-y-2 text-xs font-mono">
+              <div class="flex justify-between border-b border-zinc-900 pb-1">
+                <span class="text-zinc-500" data-i18n="meta_camera">Camera</span>
+                <span class="text-zinc-300 font-semibold" id="meta-camera">-</span>
+              </div>
+              <div class="flex justify-between border-b border-zinc-900 pb-1">
+                <span class="text-zinc-500" data-i18n="meta_iso">ISO</span>
+                <span class="text-zinc-300 font-semibold" id="meta-iso">-</span>
+              </div>
+              <div class="flex justify-between border-b border-zinc-900 pb-1">
+                <span class="text-zinc-500" data-i18n="meta_aperture">Aperture</span>
+                <span class="text-zinc-300 font-semibold" id="meta-aperture">-</span>
+              </div>
+              <div class="flex justify-between pb-1">
+                <span class="text-zinc-500" data-i18n="meta_shutter">Shutter</span>
+                <span class="text-zinc-300 font-semibold" id="meta-shutter">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- File Metadata Info -->
+          <div>
+            <h3 class="text-xs font-medium text-zinc-400 mb-2" data-i18n="meta_file_info">File Info</h3>
+            <div class="bg-zinc-950 rounded-lg border border-brand-border p-3 space-y-2 text-xs font-mono">
+              <div class="flex flex-col gap-1 border-b border-zinc-900 pb-1">
+                <span class="text-zinc-500" data-i18n="meta_filename">Filename</span>
+                <span class="text-zinc-300 truncate" id="meta-filename" title="-">-</span>
+              </div>
+              <div class="flex justify-between border-b border-zinc-900 pb-1">
+                <span class="text-zinc-500" data-i18n="meta_resolution">Resolution</span>
+                <span class="text-zinc-300" id="meta-resolution">-</span>
+              </div>
+              <div class="flex justify-between pb-1">
+                <span class="text-zinc-500" data-i18n="meta_size">Size</span>
+                <span class="text-zinc-300" id="meta-size">-</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- BOTTOM STATUS BAR -->
+  <footer
+    class="h-8 border-t border-brand-border bg-brand-panel flex items-center justify-between px-6 text-[10px] text-zinc-500 select-none">
+    <div class="flex items-center gap-3">
+      <span class="flex items-center gap-1.5"><span
+          class="w-1.5 h-1.5 rounded-full bg-brand-success animate-pulse"></span> <span data-i18n="lbl_connected">Server
+          Connected</span></span>
+      <span class="text-zinc-700">|</span>
+      <span id="session-status" data-i18n="log_ready">System ready. Please open a folder.</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <a href="https://github.com/dexccv" target="_blank" rel="noopener noreferrer" class="hover:text-purple-400 transition flex items-center gap-1 text-zinc-400 font-mono">
+        <i data-lucide="code" class="w-3 h-3 text-purple-400"></i> Created by <span class="font-semibold text-purple-300 hover:underline">dexccv</span>
+      </a>
+      <span class="text-zinc-700">|</span>
+      <span class="font-mono text-brand-blue" data-i18n="lbl_footer_help">Ctrl+H / F1: Shortcuts Guide</span>
+    </div>
+  </footer>
+
+  <!-- Follow GitHub Pop-Up Modal -->
+  <div id="github-follow-modal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-md bg-zinc-950 border border-purple-900/80 rounded-2xl p-6 shadow-2xl relative flex flex-col items-center text-center space-y-4 animate-in fade-in zoom-in duration-200">
+      <button onclick="dismissGithubModal()" class="absolute top-3 right-3 p-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-900 transition">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-purple-900 to-brand-blue border border-purple-700/60 flex items-center justify-center shadow-xl shadow-purple-900/30">
+        <i data-lucide="github" class="w-8 h-8 text-white"></i>
+      </div>
+
+      <div class="space-y-1">
+        <h3 class="text-base font-bold text-white tracking-wide">Dukung Pengembang / Author</h3>
+        <p class="text-xs text-purple-300 font-mono">Photo Sorter Pro by <span class="font-semibold underline">dexccv</span></p>
+      </div>
+
+      <p class="text-xs text-zinc-300 leading-relaxed px-2">
+        Halo! Terima kasih telah menggunakan <strong>Photo Sorter Pro</strong>. Jika aplikasi ini membantu mempermudah pekerjaan sortir foto Anda, dukung pengembang dengan memberikan ⭐ <strong>Star</strong> atau follow akun GitHub <strong>@dexccv</strong>.
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-center gap-2.5 w-full pt-2">
+        <a href="https://github.com/dexccv" target="_blank" rel="noopener noreferrer" onclick="dismissGithubModal()" class="w-full py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-600/25 transition">
+          <i data-lucide="star" class="w-4 h-4 text-amber-300 fill-amber-300"></i> Follow @dexccv di GitHub
+        </a>
+        <button onclick="dismissGithubModal()" class="w-full py-2.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-brand-border text-zinc-400 hover:text-white text-xs transition">
+          Nanti Saja
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Overlay Modal -->
+  <div id="help-modal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden">
+    <div
+      class="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-200">
+      <div class="p-6 border-b border-brand-border flex items-center justify-between bg-zinc-950">
+        <h2 class="text-sm font-semibold tracking-wider text-brand-accent uppercase flex items-center gap-2">
+          <i data-lucide="keyboard"></i> <span data-i18n="help_title">Keyboard Shortcuts Guide</span>
+        </h2>
+        <button onclick="closeHelpModal()" class="p-1 rounded hover:bg-zinc-800"><i data-lucide="x"
+            class="w-4 h-4"></i></button>
+      </div>
+      <div class="p-6 max-h-[400px] overflow-y-auto space-y-4">
+        <div class="grid grid-cols-2 gap-4 text-xs font-mono">
+          <div class="space-y-3">
+            <h3 class="text-[10px] text-zinc-500 uppercase font-semibold" data-i18n="help_nav">Image Navigation</h3>
+            <div class="flex justify-between"><span class="text-brand-accent" data-i18n="help_nav_next">Next
+                Image</span><span>ArrowRight / Space</span></div>
+            <div class="flex justify-between"><span class="text-brand-accent" data-i18n="help_nav_prev">Previous
+                Image</span><span>ArrowLeft</span></div>
+            <div class="flex justify-between"><span class="text-brand-accent" data-i18n="help_nav_undo">Undo
+                Action</span><span>Ctrl+Z</span></div>
+            <div class="flex justify-between"><span class="text-brand-accent"
+                data-i18n="help_nav_rotate">Rotate</span><span>R / L</span></div>
+          </div>
+          <div class="space-y-3">
+            <h3 class="text-[10px] text-zinc-500 uppercase font-semibold" data-i18n="help_file">File & Panel</h3>
+            <div class="flex justify-between"><span class="text-brand-accent" data-i18n="help_file_folder">Create
+                Folder</span><span>Ctrl+N</span></div>
+            <div class="flex justify-between"><span class="text-brand-accent" data-i18n="help_file_src">Open
+                Folder</span><span>Ctrl+O</span></div>
+            <div class="flex justify-between"><span class="text-brand-accent" data-i18n="help_file_del">Move
+                Trash</span><span>Delete</span></div>
+            <div class="flex justify-between"><span class="text-brand-accent" data-i18n="help_file_left">Toggle
+                Explorer</span><span>Ctrl+L</span></div>
+            <div class="flex justify-between"><span class="text-brand-accent" data-i18n="help_file_bottom">Toggle
+                Console</span><span>Ctrl+B</span></div>
+            <div class="flex justify-between"><span class="text-brand-accent" data-i18n="help_file_right">Toggle
+                EXIF</span><span>Ctrl+R</span></div>
+          </div>
+        </div>
+        <div class="bg-zinc-950 border border-brand-border p-3 rounded-lg text-xs leading-relaxed text-zinc-400">
+          <p data-i18n="help_tip">Tip [1-9] Keycaps: Press numeric keys 1-9 to move the active image to the configured
+            preset target folder.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Dialog Modal -->
+  <div id="settings-modal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden">
+    <div
+      class="w-full max-w-3xl bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col" style="max-height:90vh">
+      <!-- Modal Header -->
+      <div class="p-5 border-b border-brand-border flex items-center justify-between bg-zinc-950">
+        <h2 class="text-sm font-semibold tracking-wider text-brand-accent uppercase flex items-center gap-2">
+          <i data-lucide="sliders"></i> Pengaturan Aplikasi
+        </h2>
+        <button onclick="closeSettingsModal()" class="p-1 rounded hover:bg-zinc-800"><i data-lucide="x"
+            class="w-4 h-4"></i></button>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="flex border-b border-brand-border bg-zinc-950 px-5 gap-4 overflow-x-auto">
+        <button onclick="setSettingsTab('hotkeys')" id="set-tab-btn-hotkeys"
+          class="text-xs py-2.5 border-b-2 border-brand-blue font-medium text-white transition flex items-center gap-1.5 focus:outline-none shrink-0">
+          <i data-lucide="keyboard" class="w-3.5 h-3.5"></i><span data-i18n="tab_hotkeys">Hotkeys (1-9)</span>
+        </button>
+        <button onclick="setSettingsTab('custom-keys')" id="set-tab-btn-custom-keys"
+          class="text-xs py-2.5 border-b-2 border-transparent font-medium text-zinc-400 hover:text-white transition flex items-center gap-1.5 focus:outline-none shrink-0">
+          <i data-lucide="zap" class="w-3.5 h-3.5"></i><span>Custom Keys</span>
+        </button>
+        <button onclick="setSettingsTab('global-shortcuts')" id="set-tab-btn-global-shortcuts"
+          class="text-xs py-2.5 border-b-2 border-transparent font-medium text-zinc-400 hover:text-white transition flex items-center gap-1.5 focus:outline-none shrink-0">
+          <i data-lucide="key" class="w-3.5 h-3.5"></i><span data-i18n="tab_global_shortcuts">Shortcuts Global</span>
+        </button>
+        <button onclick="setSettingsTab('appearance')" id="set-tab-btn-appearance"
+          class="text-xs py-2.5 border-b-2 border-transparent font-medium text-zinc-400 hover:text-white transition flex items-center gap-1.5 focus:outline-none shrink-0">
+          <i data-lucide="palette" class="w-3.5 h-3.5"></i><span data-i18n="tab_appearance">Tampilan</span>
+        </button>
+        <button onclick="setSettingsTab('system')" id="set-tab-btn-system"
+          class="text-xs py-2.5 border-b-2 border-transparent font-medium text-zinc-400 hover:text-white transition flex items-center gap-1.5 focus:outline-none shrink-0">
+          <i data-lucide="cpu" class="w-3.5 h-3.5"></i><span data-i18n="tab_system">Sistem &amp; Ekstensi</span>
+        </button>
+      </div>
+
+      <!-- Tab Content Area -->
+      <div class="p-6 space-y-4 overflow-y-auto flex-1" style="max-height:calc(90vh - 160px)">
+
+        <!-- Conflict Summary Banner (shown dynamically) -->
+        <div id="conflict-summary-bar" class="hidden">
+          <div class="rounded-xl border border-red-900/60 bg-red-950/30 p-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-red-400 text-sm">⚠</span>
+                <span class="text-xs font-semibold text-red-300" id="conflict-summary-title">Konflik Terdeteksi</span>
+              </div>
+              <button onclick="toggleConflictDetail()" class="text-[10px] text-zinc-500 hover:text-white transition" id="conflict-detail-toggle">▼ Detail</button>
+            </div>
+            <div id="conflict-summary-detail" class="hidden mt-3 space-y-1.5" ></div>
+          </div>
+        </div>
+
+        <!-- Tab 1: Hotkeys -->
+        <div id="set-tab-content-hotkeys" class="space-y-4">
+          <p class="text-xs text-zinc-400" data-i18n="lbl_hotkeys_desc">Configure fast automatic moves for numeric
+            presets [1-9].</p>
+          <div class="space-y-3" id="settings-hotkeys-rows">
+            <!-- Loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- Tab 4: Global Shortcuts Recorder -->
+        <div id="set-tab-content-global-shortcuts" class="space-y-4 hidden">
+          <p class="text-xs text-zinc-400" data-i18n="lbl_global_desc">Click a key box and press any key combination on
+            keyboard to rebind shortcuts.</p>
+          <div class="space-y-2 max-h-[300px] overflow-y-auto pr-1" id="settings-global-shortcuts-rows">
+            <!-- Loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- Tab 5: Custom Keys -->
+        <div id="set-tab-content-custom-keys" class="space-y-3 hidden">
+          <!-- Header -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-semibold text-zinc-200">Custom Keyboard Shortcuts</p>
+              <p class="text-[10px] text-zinc-500 mt-0.5">Tetapkan tombol apa saja (huruf, F-key, kombinasi) ke action &amp; folder tujuan.</p>
+            </div>
+            <button onclick="addCustomHotkeyRow()" 
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-blue hover:bg-brand-blue/80 text-white text-xs font-medium transition">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Tambah Hotkey
+            </button>
+          </div>
+          <!-- Legend -->
+          <div class="grid grid-cols-4 gap-2 text-[9px] text-zinc-600 font-semibold uppercase tracking-wider px-1">
+            <span>Tombol</span><span>Label</span><span>Action</span><span>Folder Tujuan</span>
+          </div>
+          <!-- Rows container -->
+          <div class="space-y-2 max-h-[300px] overflow-y-auto pr-1" id="custom-hotkeys-rows">
+            <!-- Populated dynamically -->
+          </div>
+          <!-- Empty state -->
+          <div id="custom-hotkeys-empty" class="text-center py-8 text-zinc-600 text-xs hidden">
+            <i data-lucide="key" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
+            <p>Belum ada custom hotkey. Klik "Tambah Hotkey" untuk membuat baru.</p>
+          </div>
+        </div>
+
+        <!-- Tab 2: Appearance -->
+        <div id="set-tab-content-appearance" class="space-y-5 hidden">
+          <p class="text-xs text-zinc-400" data-i18n="lbl_theme_desc">Configure visual color themes and layout options.
+          </p>
+
+          <!-- Themes List -->
+          <div class="space-y-2">
+            <h3 class="text-xs font-semibold text-zinc-300" data-i18n="lbl_theme">Application Theme</h3>
+            <div class="grid grid-cols-2 gap-3">
+              <label
+                class="flex items-center gap-2 p-3 bg-zinc-950 border border-brand-border rounded-xl cursor-pointer hover:border-zinc-700">
+                <input type="radio" name="opt-theme" value="theme-black" class="text-brand-blue focus:ring-0">
+                <span class="text-xs text-zinc-300">True Black (Default)</span>
+              </label>
+              <label
+                class="flex items-center gap-2 p-3 bg-zinc-950 border border-brand-border rounded-xl cursor-pointer hover:border-zinc-700">
+                <input type="radio" name="opt-theme" value="theme-midnight" class="text-brand-blue focus:ring-0">
+                <span class="text-xs text-zinc-300">Midnight Blue</span>
+              </label>
+              <label
+                class="flex items-center gap-2 p-3 bg-zinc-950 border border-brand-border rounded-xl cursor-pointer hover:border-zinc-700">
+                <input type="radio" name="opt-theme" value="theme-emerald" class="text-brand-blue focus:ring-0">
+                <span class="text-xs text-zinc-300">Emerald Forest</span>
+              </label>
+              <label
+                class="flex items-center gap-2 p-3 bg-zinc-950 border border-brand-border rounded-xl cursor-pointer hover:border-zinc-700">
+                <input type="radio" name="opt-theme" value="theme-cyberpunk" class="text-brand-blue focus:ring-0">
+                <span class="text-xs text-zinc-300">Cyberpunk Neon</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Filmstrip Size options -->
+          <div class="space-y-2">
+            <h3 class="text-xs font-semibold text-zinc-300" data-i18n="lbl_th_size">Preview Thumbnail Size</h3>
+            <div class="flex gap-4">
+              <label class="flex items-center gap-2 cursor-pointer text-xs">
+                <input type="radio" name="opt-th-size" value="small"> <span data-i18n="sz_small">Small</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer text-xs">
+                <input type="radio" name="opt-th-size" value="medium"> <span data-i18n="sz_medium">Medium</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer text-xs">
+                <input type="radio" name="opt-th-size" value="large"> <span data-i18n="sz_large">Large</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Micro-animations toggle -->
+          <div class="space-y-2 border-t border-brand-border pt-4">
+            <h3 class="text-xs font-semibold text-zinc-300" data-i18n="lbl_animations">Animations & Transitions</h3>
+            <label class="flex items-center gap-2 cursor-pointer text-xs">
+              <input type="checkbox" id="chk-animations" class="rounded border-zinc-700 bg-zinc-950 text-brand-blue">
+              <span data-i18n="lbl_animations_desc">Enable transition animations (slide out & shrink when
+                moving/deleting)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Tab 3: System / Extensions -->
+        <div id="set-tab-content-system" class="space-y-5 hidden">
+          <p class="text-xs text-zinc-400" data-i18n="lbl_formats_desc">File system and scan extension settings.</p>
+
+          <!-- Image Extensions Checkboxes -->
+          <div class="space-y-2">
+            <h3 class="text-xs font-semibold text-zinc-300" data-i18n="lbl_formats">Scanned File Formats</h3>
+            <div class="flex flex-wrap gap-4 text-xs">
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" id="ext-jpg" value=".jpg"
+                  class="rounded border-zinc-700 bg-zinc-950 text-brand-blue">
+                <span>.JPG / .JPEG</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" id="ext-png" value=".png"
+                  class="rounded border-zinc-700 bg-zinc-950 text-brand-blue">
+                <span>.PNG</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" id="ext-webp" value=".webp"
+                  class="rounded border-zinc-700 bg-zinc-950 text-brand-blue">
+                <span>.WEBP</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" id="ext-gif" value=".gif"
+                  class="rounded border-zinc-700 bg-zinc-950 text-brand-blue">
+                <span>.GIF</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- General System options -->
+          <div class="space-y-4 border-t border-brand-border pt-4">
+            <h3 class="text-xs font-semibold text-zinc-300" data-i18n="lbl_general">General & Security</h3>
+            <label class="flex items-center gap-2 cursor-pointer text-xs">
+              <input type="checkbox" id="chk-ask-delete" class="rounded border-zinc-700 bg-zinc-950 text-brand-blue">
+              <span data-i18n="lbl_ask_delete">Confirm before sending images to Recycle Bin</span>
+            </label>
+
+            <div class="flex flex-col gap-1 mt-2">
+              <h4 class="text-xs font-semibold text-zinc-300" data-i18n="lbl_lang">Interface Language</h4>
+              <p class="text-[10px] text-zinc-500" data-i18n="lbl_lang_desc">Change the display language of the
+                interface.</p>
+              <select id="opt-lang"
+                class="mt-1 bg-zinc-950 border border-brand-border rounded-lg px-3 py-2 text-xs text-brand-blue font-bold outline-none focus:border-brand-blue w-64 cursor-pointer">
+                <option value="en">English</option>
+                <option value="id">Bahasa Indonesia</option>
+                <option value="zh">简体中文 (Chinese)</option>
+                <option value="ja">日本語 (Japanese)</option>
+                <option value="pt">Português (Brazil)</option>
+                <option value="jv">Basa Jawa (Javanese)</option>
+                <option value="jv-tg">Basa Jawa (Ngapak Tegalan)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 border-t border-brand-border bg-zinc-950 flex justify-end gap-3 shrink-0">
+        <button onclick="closeSettingsModal()"
+          class="px-4 py-2 rounded-lg border border-brand-border text-xs hover:bg-zinc-900 transition"
+          data-i18n="btn_cancel">Cancel</button>
+        <button onclick="saveSettings()"
+          class="px-5 py-2 rounded-lg bg-brand-blue hover:bg-brand-blue/80 text-white font-medium text-xs transition"
+          data-i18n="btn_save">Save & Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Dialog Modal (Alert, Confirm, Prompt) -->
+  <div id="custom-dialog-modal"
+    class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden animate-in fade-in duration-150">
+    <div
+      class="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in duration-200">
+      <div class="p-5 border-b border-brand-border bg-zinc-950 flex items-center gap-2.5">
+        <i id="dialog-icon" data-lucide="help-circle" class="w-5 h-5 text-brand-blue"></i>
+        <h2 id="dialog-title" class="text-xs font-semibold tracking-wider text-white uppercase"
+          data-i18n="dlg_confirm_title">Confirmation</h2>
+      </div>
+      <div class="p-6 space-y-4">
+        <p id="dialog-message" class="text-xs text-zinc-300 leading-relaxed"></p>
+        <input type="text" id="dialog-input"
+          class="w-full bg-zinc-950 border border-brand-border rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-brand-blue font-mono"
+          placeholder="...">
+      </div>
+      <div class="p-4 border-t border-brand-border bg-zinc-950 flex justify-end gap-3">
+        <button id="dialog-btn-cancel"
+          class="px-4 py-2 rounded-lg border border-brand-border text-xs text-zinc-400 hover:text-white hover:bg-zinc-900 transition"
+          data-i18n="btn_cancel">Cancel</button>
+        <button id="dialog-btn-ok"
+          class="px-5 py-2 rounded-lg bg-brand-blue hover:bg-brand-blue/80 text-white font-medium text-xs transition"
+          data-i18n="btn_ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP STATE SCRIPT -->
+  <script>
+    // Internationalization dataset
+    const TRANSLATIONS = {
+      en: {
+        title: "PHOTO SORTER PRO",
+        subtitle: "ELITE EDITION v2.3",
+        tab_previews: "Folder Contents",
+        tab_logs: "Activity Log",
+        tab_presets: "Presets",
+        lbl_explorer: "Explorer",
+        lbl_drives: "Drives",
+        lbl_metadata: "Image Info",
+        lbl_open_folder: "Open Folder",
+        lbl_new: "New",
+        lbl_new_folder: "New Folder",
+        lbl_no_image: "No image selected",
+        lbl_no_image_desc: "Please select a source folder in the explorer or type a path in the address bar to scan files.",
+        lbl_histogram: "Histogram Curve",
+        meta_camera_exif: "Camera EXIF",
+        meta_camera: "Camera",
+        meta_iso: "ISO",
+        meta_aperture: "Aperture",
+        meta_shutter: "Shutter",
+        meta_file_info: "File Info",
+        meta_filename: "Filename",
+        meta_resolution: "Resolution",
+        meta_size: "Size",
+        lbl_connected: "Server Connected",
+        lbl_footer_help: "Ctrl+H / F1: Shortcuts Guide",
+        settings_title: "Application Settings",
+        tab_hotkeys: "Hotkeys (1-9)",
+        tab_global_shortcuts: "Shortcuts Global",
+        tab_appearance: "Appearance",
+        tab_system: "System & Extensions",
+        lbl_hotkeys_desc: "Configure fast automatic moves for numeric presets [1-9].",
+        lbl_global_desc: "Click a key box and press any key combination on keyboard to rebind shortcuts.",
+        lbl_theme: "Application Theme",
+        lbl_theme_desc: "Configure visual color themes and layout options.",
+        lbl_th_size: "Preview Thumbnail Size",
+        lbl_animations: "Animations & Transitions",
+        lbl_animations_desc: "Enable transition animations (slide out & shrink when moving/deleting)",
+        lbl_formats: "Scanned File Formats",
+        lbl_formats_desc: "File system and scan extension settings.",
+        lbl_general: "General & Security",
+        lbl_ask_delete: "Confirm before sending images to Recycle Bin",
+        lbl_lang: "Interface Language",
+        lbl_lang_desc: "Change the display language of the interface.",
+        btn_save: "Save & Apply",
+        btn_cancel: "Cancel",
+        btn_ok: "OK",
+        help_title: "Keyboard Shortcuts Guide",
+        help_nav: "Image Navigation",
+        help_nav_next: "Next Image",
+        help_nav_prev: "Previous Image",
+        help_nav_undo: "Undo Last Action",
+        help_nav_rotate: "Rotate (CW/CCW)",
+        help_file: "File & Panel",
+        help_file_folder: "Create Folder",
+        help_file_src: "Open Folder",
+        help_file_del: "Move Trash",
+        help_file_left: "Toggle Explorer",
+        help_file_bottom: "Toggle Console",
+        help_file_right: "Toggle EXIF",
+        help_tip: "Tip [1-9] Keycaps: Press numeric keys 1-9 to move the active image to the configured preset target folder.",
+        dlg_confirm_title: "Confirmation",
+        dlg_confirm_del_title: "Delete Image",
+        dlg_confirm_del_msg: "Move image \"{file}\" to Recycle Bin?",
+        dlg_create_folder_title: "Create New Folder",
+        dlg_create_folder_msg: "Enter name for the new subfolder:",
+        dlg_open_folder_title: "Open Source Folder",
+        dlg_open_folder_msg: "Paste absolute path of your image folder (from File Explorer):",
+        dlg_preset_title: "Select Preset {key} Target",
+        dlg_preset_msg: "Paste absolute path of the destination folder for this preset:",
+        log_ready: "System ready. Please open a folder from the Explorer.",
+        log_scan_dir: "Scanning folder: {path}. Found {count} images.",
+        log_create_folder_ok: "Folder successfully created: {name}",
+        log_create_folder_err: "Failed to create folder: {err}",
+        log_rotate_ok: "Rotation {degrees}° success: {file}",
+        log_rotate_err: "Failed to rotate: {err}",
+        log_action_ok: "Success {action}: {file} -> {target}",
+        log_action_err: "Failed: {err}",
+        log_undo_ok: "Undo successful: {msg}",
+        log_undo_err: "Undo failed: {err}",
+        log_clear: "Activity log cleared.",
+        log_save_settings: "Settings saved and applied successfully.",
+        sz_small: "Small",
+        sz_medium: "Medium",
+        sz_large: "Large",
+        lbl_move: "MOVE",
+        lbl_copy: "COPY",
+        lbl_target_placeholder: "C:\\Path\\to\\target\\folder",
+        lbl_browse: "Browse",
+        lbl_press_key: "Press key...",
+        lbl_no_images_in_folder: "This folder contains no images.",
+        sh_next_image: "Next Image",
+        sh_next_image_desc: "Display the next image in order",
+        sh_prev_image: "Previous Image",
+        sh_prev_image_desc: "Display the previous image in order",
+        sh_undo: "Undo Last Action",
+        sh_undo_desc: "Rollback the last move or copy operation",
+        sh_delete: "Delete (Recycle Bin)",
+        sh_delete_desc: "Move the active image to the Recycle Bin",
+        sh_rotate_cw: "Rotate 90° CW",
+        sh_rotate_cw_desc: "Rotate the image clockwise",
+        sh_rotate_ccw: "Rotate 90° CCW",
+        sh_rotate_ccw_desc: "Rotate the image counter-clockwise",
+        sh_help: "Open Help Guide",
+        sh_help_desc: "Show keyboard shortcuts and tips",
+        sh_toggle_explorer: "Toggle Left Explorer",
+        sh_toggle_explorer_desc: "Hide or show the folder directory sidebar",
+        sh_toggle_console: "Toggle Bottom Console",
+        sh_toggle_console_desc: "Hide or show the filmstrip and logs panel",
+        sh_toggle_metadata: "Toggle Right EXIF Info",
+        sh_toggle_metadata_desc: "Hide or show the camera metadata sidebar",
+        sh_create_folder: "Create Folder",
+        sh_create_folder_desc: "Create a subfolder in the active directory",
+        sh_open_folder: "Open Source Directory",
+        sh_open_folder_desc: "Enter a path to open a new image folder"
+      },
+      id: {
+        title: "PHOTO SORTER PRO",
+        subtitle: "EDISI ELITE v2.3",
+        tab_previews: "Isi Folder",
+        tab_logs: "Log Aktivitas",
+        tab_presets: "Preset",
+        lbl_explorer: "Penjelajah",
+        lbl_drives: "Drive",
+        lbl_metadata: "Info Gambar",
+        lbl_open_folder: "Buka Folder",
+        lbl_new: "Baru",
+        lbl_new_folder: "Folder Baru",
+        lbl_no_image: "Tidak ada gambar yang terpilih",
+        lbl_no_image_desc: "Silakan pilih folder sumber di bilah kiri atau masukkan path di bilah alamat atas untuk memindai berkas.",
+        lbl_histogram: "Kurva Histogram",
+        meta_camera_exif: "Kamera EXIF",
+        meta_camera: "Kamera",
+        meta_iso: "ISO",
+        meta_aperture: "Aperture",
+        meta_shutter: "Shutter",
+        meta_file_info: "Informasi File",
+        meta_filename: "Nama File",
+        meta_resolution: "Dimensi",
+        meta_size: "Ukuran",
+        lbl_connected: "Server Terhubung",
+        lbl_footer_help: "Ctrl+H / F1: Panduan Shortcuts",
+        settings_title: "Pengaturan Aplikasi",
+        tab_hotkeys: "Hotkeys (1-9)",
+        tab_global_shortcuts: "Shortcuts Global",
+        tab_appearance: "Tampilan",
+        tab_system: "Sistem & Ekstensi",
+        lbl_hotkeys_desc: "Konfigurasikan aksi pemindahan otomatis cepat untuk masing-masing angka [1-9].",
+        lbl_global_desc: "Klik pada kotak tombol, lalu tekan kombinasi tombol keyboard baru untuk mengubah pintasan global.",
+        lbl_theme: "Tema Warna Aplikasi",
+        lbl_theme_desc: "Sesuaikan skema tema warna visual dan ukuran elemen tata letak.",
+        lbl_th_size: "Ukuran Thumbnail Pratinjau",
+        lbl_animations: "Animasi & Transisi",
+        lbl_animations_desc: "Aktifkan animasi transisi (Slide out & fade saat memindahkan/menghapus)",
+        lbl_formats: "Format Gambar yang Dipindai",
+        lbl_formats_desc: "Pengaturan fungsionalitas sistem berkas dan pemindaian file gambar.",
+        lbl_general: "Umum & Keamanan",
+        lbl_ask_delete: "Konfirmasikan sebelum menghapus gambar ke Recycle Bin",
+        lbl_lang: "Bahasa Antarmuka",
+        lbl_lang_desc: "Ubah bahasa tampilan pada antarmuka aplikasi.",
+        btn_save: "Simpan & Terapkan",
+        btn_cancel: "Batal",
+        btn_ok: "OK",
+        help_title: "Panduan Tombol Cepat (Shortcuts)",
+        help_nav: "Navigasi Gambar",
+        help_nav_next: "Gambar Selanjutnya",
+        help_nav_prev: "Gambar Sebelumnya",
+        help_nav_undo: "Undo Aksi Terakhir",
+        help_nav_rotate: "Rotasi (CW/CCW)",
+        help_file: "Manajemen File & Panel",
+        help_file_folder: "Buat Folder",
+        help_file_src: "Pilih Folder",
+        help_file_del: "Pindahkan Trash",
+        help_file_left: "Sembunyi Explorer",
+        help_file_bottom: "Sembunyi Console",
+        help_file_right: "Sembunyi Metadata",
+        help_tip: "Tip Preset Angka [1-9]: Anda dapat menekan angka 1 s/d 9 untuk langsung memindahkan file saat ini ke folder tujuan preset yang dikonfigurasi.",
+        dlg_confirm_title: "Konfirmasi",
+        dlg_confirm_del_title: "Hapus Gambar",
+        dlg_confirm_del_msg: "Pindahkan gambar \"{file}\" ke Recycle Bin?",
+        dlg_create_folder_title: "Buat Folder Baru",
+        dlg_create_folder_msg: "Masukkan nama untuk subfolder baru:",
+        dlg_open_folder_title: "Buka Folder Sumber",
+        dlg_open_folder_msg: "Tempel path absolut direktori gambar Anda (dari File Explorer):",
+        dlg_preset_title: "Pilih Tujuan Preset {key}",
+        dlg_preset_msg: "Tempel path absolut folder tujuan untuk preset ini:",
+        log_ready: "Sistem siap. Silakan buka folder melalui Explorer.",
+        log_scan_dir: "Memindai folder: {path}. Ditemukan {count} gambar.",
+        log_create_folder_ok: "Folder berhasil dibuat: {name}",
+        log_create_folder_err: "Gagal membuat folder: {err}",
+        log_rotate_ok: "Rotasi {degrees}° sukses: {file}",
+        log_rotate_err: "Gagal rotasi: {err}",
+        log_action_ok: "Sukses {action}: {file} -> {target}",
+        log_action_err: "Gagal: {err}",
+        log_undo_ok: "Undo sukses: {msg}",
+        log_undo_err: "Undo gagal: {err}",
+        log_clear: "Log aktivitas dibersihkan.",
+        log_save_settings: "Pengaturan berhasil disimpan dan diterapkan.",
+        sz_small: "Kecil",
+        sz_medium: "Sedang",
+        sz_large: "Besar",
+        lbl_move: "Pindah",
+        lbl_copy: "Salin",
+        lbl_target_placeholder: "C:\\Path\\ke\\folder\\tujuan",
+        lbl_browse: "Cari",
+        lbl_press_key: "Tekan tombol...",
+        lbl_no_images_in_folder: "Folder ini tidak memiliki file gambar.",
+        sh_next_image: "Lanjut Gambar (Next)",
+        sh_next_image_desc: "Menampilkan gambar berikutnya",
+        sh_prev_image: "Kembali Gambar (Prev)",
+        sh_prev_image_desc: "Menampilkan gambar sebelumnya",
+        sh_undo: "Undo Aksi terakhir",
+        sh_undo_desc: "Membatalkan pemindahan/penyalinan terakhir",
+        sh_delete: "Hapus Gambar (Recycle Bin)",
+        sh_delete_desc: "Memindahkan gambar aktif ke Recycle Bin",
+        sh_rotate_cw: "Rotasi 90° CW",
+        sh_rotate_cw_desc: "Memutar gambar searah jarum jam",
+        sh_rotate_ccw: "Rotasi 90° CCW",
+        sh_rotate_ccw_desc: "Memutar gambar berlawanan arah jarum jam",
+        sh_help: "Buka Panduan (Help)",
+        sh_help_desc: "Menampilkan panduan tombol cepat",
+        sh_toggle_explorer: "Toggle Explorer",
+        sh_toggle_explorer_desc: "Sembunyi/tampilkan panel folder kiri",
+        sh_toggle_console: "Toggle Console",
+        sh_toggle_console_desc: "Sembunyi/tampilkan panel log bawah",
+        sh_toggle_metadata: "Toggle EXIF Metadata",
+        sh_toggle_metadata_desc: "Sembunyi/tampilkan panel EXIF kanan",
+        sh_create_folder: "Buat Folder Baru",
+        sh_create_folder_desc: "Membuat subdirektori baru di folder aktif",
+        sh_open_folder: "Pilih Folder Sumber",
+        sh_open_folder_desc: "Membuka folder path baru di explorer"
+      },
+      zh: {
+        title: "照片整理专业版",
+        subtitle: "精英版 v2.3",
+        tab_previews: "文件夹内容",
+        tab_logs: "活动日志",
+        tab_presets: "预设",
+        lbl_explorer: "资源管理器",
+        lbl_drives: "驱动器",
+        lbl_metadata: "图片信息",
+        lbl_open_folder: "打开文件夹",
+        lbl_new: "新建",
+        lbl_new_folder: "新建文件夹",
+        lbl_no_image: "未选择图片",
+        lbl_no_image_desc: "请在左侧选择源文件夹或在上方地址栏输入路径以扫描图片文件。",
+        lbl_histogram: "直方图曲线",
+        meta_camera_exif: "相机 EXIF",
+        meta_camera: "相机",
+        meta_iso: "ISO",
+        meta_aperture: "光圈",
+        meta_shutter: "快门",
+        meta_file_info: "文件信息",
+        meta_filename: "文件名",
+        meta_resolution: "分辨率",
+        meta_size: "大小",
+        lbl_connected: "服务器已连接",
+        lbl_footer_help: "Ctrl+H / F1: 快捷键指南",
+        settings_title: "应用设置",
+        tab_hotkeys: "快捷键 (1-9)",
+        tab_global_shortcuts: "全局快捷键",
+        tab_appearance: "外观设置",
+        tab_system: "系统与扩展",
+        lbl_hotkeys_desc: "配置数字键 [1-9] 快速自动移动图片的操作。",
+        lbl_global_desc: "点击按键框并按下键盘上的组合键以重新绑定快捷键。",
+        lbl_theme: "应用主题",
+        lbl_theme_desc: "配置应用程序的视觉主题和颜色方案。",
+        lbl_th_size: "缩略图大小",
+        lbl_animations: "动画与过渡",
+        lbl_animations_desc: "启用过渡动画效果（移动或删除时的滑动与缩小效果）",
+        lbl_formats: "扫描的文件格式",
+        lbl_formats_desc: "文件系统和扫描扩展名配置。",
+        lbl_general: "通用安全设置",
+        lbl_ask_delete: "移动图片至回收站前需要确认",
+        lbl_lang: "界面语言",
+        lbl_lang_desc: "更改界面显示的语言。",
+        btn_save: "保存并应用",
+        btn_cancel: "取消",
+        btn_ok: "确定",
+        help_title: "键盘快捷键指南",
+        help_nav: "图像导航",
+        help_nav_next: "下一张图片",
+        help_nav_prev: "上一张图片",
+        help_nav_undo: "撤销操作",
+        help_nav_rotate: "旋转",
+        help_file: "文件与面板",
+        help_file_folder: "新建文件夹",
+        help_file_src: "打开文件夹",
+        help_file_del: "移动回收站",
+        help_file_left: "切换管理器",
+        help_file_bottom: "切换日志控制台",
+        help_file_right: "切换元数据",
+        help_tip: "预设按键 [1-9] 提示：按下数字键 1-9 可以直接将当前图片移动到配置的预设目标文件夹中。",
+        dlg_confirm_title: "确认",
+        dlg_confirm_del_title: "删除图片",
+        dlg_confirm_del_msg: "确定将图片 \"{file}\" 移动到回收站吗？",
+        dlg_create_folder_title: "新建文件夹",
+        dlg_create_folder_msg: "输入新子文件夹的名称：",
+        dlg_open_folder_title: "打开源文件夹",
+        dlg_open_folder_msg: "粘贴图片文件夹的绝对路径（从文件管理器复制）：",
+        dlg_preset_title: "设置预设 {key} 目标",
+        dlg_preset_msg: "粘贴该预设的目标文件夹绝对路径：",
+        log_ready: "系统就绪。请从左侧资源管理器打开文件夹。",
+        log_scan_dir: "扫描文件夹: {path}。找到 {count} 张图片。",
+        log_create_folder_ok: "文件夹创建成功: {name}",
+        log_create_folder_err: "创建文件夹失败: {err}",
+        log_rotate_ok: "旋转 {degrees}° 成功: {file}",
+        log_rotate_err: "旋转失败: {err}",
+        log_action_ok: "操作成功 {action}: {file} -> {target}",
+        log_action_err: "失败: {err}",
+        log_undo_ok: "撤销成功: {msg}",
+        log_undo_err: "撤销失败: {err}",
+        log_clear: "活动日志已清除。",
+        log_save_settings: "设置已成功保存并应用。",
+        sz_small: "小",
+        sz_medium: "中",
+        sz_large: "大",
+        lbl_move: "移动",
+        lbl_copy: "复制",
+        lbl_target_placeholder: "C:\\目标文件夹路径",
+        lbl_browse: "浏览",
+        lbl_press_key: "按下按键...",
+        lbl_no_images_in_folder: "该文件夹中没有图片文件。",
+        sh_next_image: "下一张图片",
+        sh_next_image_desc: "按顺序显示下一张图片",
+        sh_prev_image: "上一张图片",
+        sh_prev_image_desc: "按顺序显示上一张图片",
+        sh_undo: "撤销上一步操作",
+        sh_undo_desc: "撤销最后一次复制或移动操作",
+        sh_delete: "删除 (移至回收站)",
+        sh_delete_desc: "将当前激活的图片移至回收站",
+        sh_rotate_cw: "顺时针旋转 90°",
+        sh_rotate_cw_desc: "顺时针旋转图像",
+        sh_rotate_ccw: "逆时针旋转 90°",
+        sh_rotate_ccw_desc: "逆时针旋转图像",
+        sh_help: "打开帮助指南",
+        sh_help_desc: "显示键盘快捷键和提示信息",
+        sh_toggle_explorer: "切换左侧管理器",
+        sh_toggle_explorer_desc: "隐藏或显示文件夹目录侧边栏",
+        sh_toggle_console: "切换底部控制台",
+        sh_toggle_console_desc: "隐藏或显示底部胶片和日志面板",
+        sh_toggle_metadata: "切换右侧元数据",
+        sh_toggle_metadata_desc: "隐藏或显示相机元数据侧边栏",
+        sh_create_folder: "新建文件夹",
+        sh_create_folder_desc: "在活动目录中创建一个子文件夹",
+        sh_open_folder: "打开源目录",
+        sh_open_folder_desc: "输入路径以打开一个新的图片文件夹"
+      },
+      ja: {
+        title: "フォトソーター PRO",
+        subtitle: "エリートエディション v2.3",
+        tab_previews: "フォルダー内容",
+        tab_logs: "活動ログ",
+        tab_presets: "プリセット",
+        lbl_explorer: "エクスプローラー",
+        lbl_drives: "ドライブ一覧",
+        lbl_metadata: "画像情報",
+        lbl_open_folder: "フォルダーを開く",
+        lbl_new: "新規",
+        lbl_new_folder: "新規フォルダ",
+        lbl_no_image: "画像が選択されていません",
+        lbl_no_image_desc: "エクスプローラーからソースフォルダーを選択するか、アドレスバーにパスを入力してファイルをスキャンしてください。",
+        lbl_histogram: "ヒストグラム",
+        meta_camera_exif: "カメラ EXIF",
+        meta_camera: "カメラ",
+        meta_iso: "ISO",
+        meta_aperture: "F値 (絞り)",
+        meta_shutter: "シャッター",
+        meta_file_info: "ファイル情報",
+        meta_filename: "ファイル名",
+        meta_resolution: "解像度",
+        meta_size: "サイズ",
+        lbl_connected: "サーバー接続完了",
+        lbl_footer_help: "Ctrl+H / F1: ショートカットガイド",
+        settings_title: "環境設定",
+        tab_hotkeys: "ショートカット (1-9)",
+        tab_global_shortcuts: "グローバルショートカット",
+        tab_appearance: "テーマと表示",
+        tab_system: "システム設定",
+        lbl_hotkeys_desc: "数字キー [1-9] の高速自動画像移動を設定します。",
+        lbl_global_desc: "キーボックスをクリックし、キーボード of 任意の組み合わせを押して再設定します。",
+        lbl_theme: "配色テーマ",
+        lbl_theme_desc: "アプリの視覚的テーマと配色を構成します。",
+        lbl_th_size: "サムネイルサイズ",
+        lbl_animations: "アニメーション効果",
+        lbl_animations_desc: "移動時や削除時のアニメーション効果（スライド＆縮小効果）を有効にする",
+        lbl_formats: "スキャン対象フォーマット",
+        lbl_formats_desc: "ファイルシステムおよびスキャン拡張子の設定。",
+        lbl_general: "全般＆セキュリティ",
+        lbl_ask_delete: "ゴミ箱へ送る前に確認ダイアログを表示する",
+        lbl_lang: "表示言語",
+        lbl_lang_desc: "インターフェースの表示言語を変更します。",
+        btn_save: "保存して適用",
+        btn_cancel: "キャンセル",
+        btn_ok: "OK",
+        help_title: "キーボードショートカット一覧",
+        help_nav: "画像操作",
+        help_nav_next: "次の画像",
+        help_nav_prev: "前の画像",
+        help_nav_undo: "元に戻す",
+        help_nav_rotate: "回転",
+        help_file: "ファイルと表示",
+        help_file_folder: "フォルダ作成",
+        help_file_src: "フォルダ選択",
+        help_file_del: "ゴミ箱へ",
+        help_file_left: "エクスプローラー開閉",
+        help_file_bottom: "ログパネル開閉",
+        help_file_right: "情報パネル開閉",
+        help_tip: "ヒント [1-9] キー：数字キー 1-9 を押すと、アクティブな画像を設定された宛先プリセットフォルダに即座に移動できます。",
+        dlg_confirm_title: "確認",
+        dlg_confirm_del_title: "画像の削除",
+        dlg_confirm_del_msg: "画像 \"{file}\" をゴミ箱に移動しますか？",
+        dlg_create_folder_title: "新規フォルダーの作成",
+        dlg_create_folder_msg: "新しいサブフォルダーの名前を入力してください：",
+        dlg_open_folder_title: "ソースフォルダを開く",
+        dlg_open_folder_msg: "画像フォルダーの絶対パスを貼り付けてください（エクスプローラーからコピー）：",
+        dlg_preset_title: "プリセット {key} の宛先設定",
+        dlg_preset_msg: "このプリセットの宛先フォルダーの絶対パスを貼り付けてください：",
+        log_ready: "準備ができました。フォルダーを開いてください。",
+        log_scan_dir: "フォルダーをスキャン中: {path}. {count} 枚の画像が見つかりました。",
+        log_create_folder_ok: "フォルダーが作成されました: {name}",
+        log_create_folder_err: "フォルダー作成に失敗しました: {err}",
+        log_rotate_ok: "回転 {degrees}° 成功: {file}",
+        log_rotate_err: "回転失敗: {err}",
+        log_action_ok: "{action} 成功: {file} -> {target}",
+        log_action_err: "失敗しました: {err}",
+        log_undo_ok: "元に戻しました: {msg}",
+        log_undo_err: "元に戻すのに失敗しました: {err}",
+        log_clear: "ログをクリアしました。",
+        log_save_settings: "設定が保存され、適用されました。",
+        sz_small: "小",
+        sz_medium: "中",
+        sz_large: "大",
+        lbl_move: "移動",
+        lbl_copy: "コピー",
+        lbl_target_placeholder: "C:\\コピー先フォルダのパス",
+        lbl_browse: "参照",
+        lbl_press_key: "キーを押す...",
+        lbl_no_images_in_folder: "このフォルダーには画像ファイルがありません。",
+        sh_next_image: "次の画像へ",
+        sh_next_image_desc: "順次の画像を表示します",
+        sh_prev_image: "前の画像へ",
+        sh_prev_image_desc: "前の画像を表示します",
+        sh_undo: "元に戻す",
+        sh_undo_desc: "最後のコピーまたは移動操作を元に戻す",
+        sh_delete: "削除 (ゴミ箱)",
+        sh_delete_desc: "アクティブな画像をゴミ箱へ移動します",
+        sh_rotate_cw: "右回転 90°",
+        sh_rotate_cw_desc: "画像を時計回りに回転します",
+        sh_rotate_ccw: "左回転 90°",
+        sh_rotate_ccw_desc: "画像を反時計回りに回転します",
+        sh_help: "ヘルプを開く",
+        sh_help_desc: "キーボードショートカットとヒントを表示します",
+        sh_toggle_explorer: "エクスプローラー表示切替",
+        sh_toggle_explorer_desc: "左フォルダーディレクトリサイドバーの表示・非表示",
+        sh_toggle_console: "コンソール表示切替",
+        sh_toggle_console_desc: "下部フィルムストリップとログパネルの表示・非表示",
+        sh_toggle_metadata: "メタデータ表示切替",
+        sh_toggle_metadata_desc: "右カメラメタデータサイドバーの表示・非表示",
+        sh_create_folder: "フォルダ作成",
+        sh_create_folder_desc: "アクティブなディレクトリにサブフォルダを作成します",
+        sh_open_folder: "ソースフォルダを開く",
+        sh_open_folder_desc: "入力パスで新しい画像フォルダを開きます"
+      },
+      pt: {
+        title: "ORGANIZADOR DE FOTOS PRO",
+        subtitle: "EDIÇÃO ELITE v2.3",
+        tab_previews: "Conteúdo da Pasta",
+        tab_logs: "Log de Atividades",
+        tab_presets: "Presets",
+        lbl_explorer: "Explorador",
+        lbl_drives: "Unidades",
+        lbl_metadata: "Info da Imagem",
+        lbl_open_folder: "Abrir Pasta",
+        lbl_new: "Novo",
+        lbl_new_folder: "Nova Pasta",
+        lbl_no_image: "Nenhuma imagem selecionada",
+        lbl_no_image_desc: "Por favor, selecione uma pasta no explorador ou digite o caminho na barra de endereços para escanear.",
+        lbl_histogram: "Histograma",
+        meta_camera_exif: "Câmera EXIF",
+        meta_camera: "Câmera",
+        meta_iso: "ISO",
+        meta_aperture: "Abertura",
+        meta_shutter: "Obturador",
+        meta_file_info: "Dados do Arquivo",
+        meta_filename: "Nome",
+        meta_resolution: "Resolução",
+        meta_size: "Tamanho",
+        lbl_connected: "Servidor Conectado",
+        lbl_footer_help: "Ctrl+H / F1: Guia de Atalhos",
+        settings_title: "Configurações do Aplicativo",
+        tab_hotkeys: "Atalhos (1-9)",
+        tab_global_shortcuts: "Atalhos Globais",
+        tab_appearance: "Aparência",
+        tab_system: "Sistema e Extensões",
+        lbl_hotkeys_desc: "Configure atalhos rápidos de movimentação para as teclas [1-9].",
+        lbl_global_desc: "Clique no campo e pressione a combinação de teclas para redefinir o atalho.",
+        lbl_theme: "Tema de Cores",
+        lbl_theme_desc: "Selecione o esquema de cores visuais do aplicativo.",
+        lbl_th_size: "Tamanho da Miniatura",
+        lbl_animations: "Animações e Efeitos",
+        lbl_animations_desc: "Ativar animações de transição (deslizar e diminuir ao mover/excluir)",
+        lbl_formats: "Formatos Suportados",
+        lbl_formats_desc: "Configurações de formatos de imagem escaneados.",
+        lbl_general: "Geral & Segurança",
+        lbl_ask_delete: "Confirmar antes de mover imagem para a Lixeira",
+        lbl_lang: "Idioma do Sistema",
+        lbl_lang_desc: "Mudar o idioma do painel e menus.",
+        btn_save: "Salvar & Aplicar",
+        btn_cancel: "Cancelar",
+        btn_ok: "OK",
+        help_title: "Guia de Atalhos de Teclado",
+        help_nav: "Navegação",
+        help_nav_next: "Próxima Imagem",
+        help_nav_prev: "Imagem Anterior",
+        help_nav_undo: "Desfazer Ação",
+        help_nav_rotate: "Rotacionar",
+        help_file: "Arquivos & Painéis",
+        help_file_folder: "Criar Pasta",
+        help_file_src: "Abrir Pasta",
+        help_file_del: "Mover Lixeira",
+        help_file_left: "Alternar Explorador",
+        help_file_bottom: "Alternar Console",
+        help_file_right: "Alternar EXIF",
+        help_tip: "Dica Atalhos [1-9]: Pressione os números de 1 a 9 no teclado para mover instantaneamente a foto atual para o destino do preset.",
+        dlg_confirm_title: "Confirmação",
+        dlg_confirm_del_title: "Excluir Foto",
+        dlg_confirm_del_msg: "Deseja mover a imagem \"{file}\" para a Lixeira?",
+        dlg_create_folder_title: "Criar Nova Pasta",
+        dlg_create_folder_msg: "Digite o nome para a nova subpasta:",
+        dlg_open_folder_title: "Abrir Pasta",
+        dlg_open_folder_msg: "Cole o caminho absoluto da pasta (copiado do Explorador de Arquivos):",
+        dlg_preset_title: "Definir Destino do Preset {key}",
+        dlg_preset_msg: "Cole o caminho absoluto do diretório para este preset:",
+        log_ready: "Sistema pronto. Por favor, abra uma pasta no Explorador.",
+        log_scan_dir: "Escaneando pasta: {path}. {count} fotos encontradas.",
+        log_create_folder_ok: "Subpasta criada: {name}",
+        log_create_folder_err: "Falha ao criar pasta: {err}",
+        log_rotate_ok: "Rotação de {degrees}° concluída: {file}",
+        log_rotate_err: "Falha ao rotacionar: {err}",
+        log_action_ok: "Sucesso {action}: {file} -> {target}",
+        log_action_err: "Falha na ação: {err}",
+        log_undo_ok: "Ação desfeita com sucesso: {msg}",
+        log_undo_err: "Falha ao desfazer: {err}",
+        log_clear: "Logs de atividade limpos.",
+        log_save_settings: "Configurações salvas e aplicadas.",
+        sz_small: "Pequeno",
+        sz_medium: "Médio",
+        sz_large: "Grande",
+        lbl_move: "Mover",
+        lbl_copy: "Copiar",
+        lbl_target_placeholder: "C:\\Caminho\\da\\pasta\\destino",
+        lbl_browse: "Procurar",
+        lbl_press_key: "Pressione a tecla...",
+        lbl_no_images_in_folder: "Esta pasta não contém arquivos de imagem.",
+        sh_next_image: "Próxima Imagem",
+        sh_next_image_desc: "Exibir a próxima imagem em ordem",
+        sh_prev_image: "Imagem Anterior",
+        sh_prev_image_desc: "Exibir a imagem anterior em ordem",
+        sh_undo: "Desfazer Ação",
+        sh_undo_desc: "Desfazer a última operação de cópia ou movimentação",
+        sh_delete: "Excluir (Lixeira)",
+        sh_delete_desc: "Mover a foto ativa para a lixeira",
+        sh_rotate_cw: "Rotacionar 90° Direita",
+        sh_rotate_cw_desc: "Girar a foto em sentido horário",
+        sh_rotate_ccw: "Rotacionar 90° Esquerda",
+        sh_rotate_ccw_desc: "Girar a foto em sentido anti-horário",
+        sh_help: "Abrir Guia de Ajuda",
+        sh_help_desc: "Exibir atalhos de teclado e dicas",
+        sh_toggle_explorer: "Alternar Explorador",
+        sh_toggle_explorer_desc: "Ocultar ou mostrar a barra de pastas esquerda",
+        sh_toggle_console: "Alternar Logs",
+        sh_toggle_console_desc: "Ocultar ou mostrar o console de atividades inferior",
+        sh_toggle_metadata: "Alternar Metadados",
+        sh_toggle_metadata_desc: "Ocultar ou mostrar o painel de EXIF direito",
+        sh_create_folder: "Criar Pasta",
+        sh_create_folder_desc: "Criar uma subpasta no diretório atual",
+        sh_open_folder: "Abrir Diretório de Origem",
+        sh_open_folder_desc: "Digitar um caminho para carregar fotos"
+      },
+      jv: {
+        title: "MILAH FOTO PRO",
+        subtitle: "EDISI ELITE v2.3",
+        tab_previews: "Isi Folder",
+        tab_logs: "Catetan Aktivitas",
+        tab_presets: "Preset",
+        lbl_explorer: "Panjlajah",
+        lbl_drives: "Drive",
+        lbl_metadata: "Katrangan Gambar",
+        lbl_open_folder: "Bukak Folder",
+        lbl_new: "Anyar",
+        lbl_new_folder: "Folder Anyar",
+        lbl_no_image: "Ora ana gambar sing dipilih",
+        lbl_no_image_desc: "Pilih folder sumber ing sisih kiwa utawa lebokake path ing dhuwur kanggo mindai gambar.",
+        lbl_histogram: "Kurva Histogram",
+        meta_camera_exif: "Kamera EXIF",
+        meta_camera: "Kamera",
+        meta_iso: "ISO",
+        meta_aperture: "Aperture",
+        meta_shutter: "Shutter Speed",
+        meta_file_info: "Informasi Berkas",
+        meta_filename: "Jeneng Berkas",
+        meta_resolution: "Resolusi",
+        meta_size: "Ukuran",
+        lbl_connected: "Server Nyambung",
+        lbl_footer_help: "Ctrl+H / F1: Panduan Shortcuts",
+        settings_title: "Setelan Aplikasi",
+        tab_hotkeys: "Hotkeys (1-9)",
+        tab_global_shortcuts: "Shortcuts Global",
+        tab_appearance: "Tampilan",
+        tab_system: "Sistem & Ekstensi",
+        lbl_hotkeys_desc: "Atur aksi mindahake otomatis kanggo angka preset [1-9].",
+        lbl_global_desc: "Pencet kothak tombol banjur ketik kombinasi tombol anyar ing keyboard kanggo ngganti shortcut.",
+        lbl_theme: "Tema Werna Aplikasi",
+        lbl_theme_desc: "Pilih werna tema visual lan tampilan aplikasi.",
+        lbl_th_size: "Ukuran Gambar Cilik",
+        lbl_animations: "Animasi & Transisi",
+        lbl_animations_desc: "Uripake animasi transisi (slide out & shrink nalika mindahake utawa mbusak)",
+        lbl_formats: "Format Gambar Sing Dipindai",
+        lbl_formats_desc: "Setelan jinis format gambar sing dipindai.",
+        lbl_general: "Umum & Keamanan",
+        lbl_ask_delete: "Tembak konfirmasi sakdurunge mbuang gambar menyang Recycle Bin",
+        lbl_lang: "Basa Aplikasi",
+        lbl_lang_desc: "Ganti basa antarmuka tampilan aplikasi.",
+        btn_save: "Simpen & Terapake",
+        btn_cancel: "Wurung",
+        btn_ok: "OK",
+        help_title: "Panduan Tombol Cepet (Shortcuts)",
+        help_nav: "Navigasi Gambar",
+        help_nav_next: "Gambar Saklanjute",
+        help_nav_prev: "Gambar Sakdurunge",
+        help_nav_undo: "Batalne Aksi Terakhir",
+        help_nav_rotate: "Rotasi (CW/CCW)",
+        help_file: "File & Panel",
+        help_file_folder: "Gawe Folder",
+        help_file_src: "Pilih Folder",
+        help_file_del: "Buang Recycle Bin",
+        help_file_left: "Tutup Explorer",
+        help_file_bottom: "Tutup Log Konsol",
+        help_file_right: "Tutup EXIF Metadata",
+        help_tip: "Tip Tombol [1-9]: Pencet tombol angka 1-9 ing keyboard kanggo langsung mindahake gambar menyang folder tujuan preset sing wis disetel.",
+        dlg_confirm_title: "Konfirmasi",
+        dlg_confirm_del_title: "Hapus Gambar",
+        dlg_confirm_del_msg: "Mindahake gambar \"{file}\" menyang Recycle Bin?",
+        dlg_create_folder_title: "Gawe Folder Anyar",
+        dlg_create_folder_msg: "Lebokake jeneng folder anyar:",
+        dlg_open_folder_title: "Bukak Folder Sumber",
+        dlg_open_folder_msg: "Tempel path absolut direktori gambar sampeyan (soko File Explorer):",
+        dlg_preset_title: "Setel Preset {key} Tujuan",
+        dlg_preset_msg: "Tempel path absolut folder tujuan kanggo preset ini:",
+        log_ready: "Sistem wis siyap. Monggo bukak folder liwat Explorer.",
+        log_scan_dir: "Mindai folder: {path}. Ketemu {count} gambar.",
+        log_create_folder_ok: "Folder kasil digawe: {name}",
+        log_create_folder_err: "Gagal gawe folder: {err}",
+        log_rotate_ok: "Rotasi {degrees}° kasil: {file}",
+        log_rotate_err: "Gagal rotasi: {err}",
+        log_action_ok: "Kasil {action}: {file} -> {target}",
+        log_action_err: "Gagal: {err}",
+        log_undo_ok: "Undo kasil: {msg}",
+        log_undo_err: "Undo gagal: {err}",
+        log_clear: "Catetan aktivitas wis diresiki.",
+        log_save_settings: "Setelan kasil disimpen lan ditrapake.",
+        sz_small: "Cilik",
+        sz_medium: "Sedheng",
+        sz_large: "Gedhe",
+        lbl_move: "Pindhah",
+        lbl_copy: "Salin",
+        lbl_target_placeholder: "C:\\Path\\menyang\\folder\\tujuan",
+        lbl_browse: "Golek",
+        lbl_press_key: "Pencet tombol...",
+        lbl_no_images_in_folder: "Folder iki ora ana gambar.",
+        sh_next_image: "Gambar Saklanjute",
+        sh_next_image_desc: "Nuduhake gambar sakbanjure miturut urutan",
+        sh_prev_image: "Gambar Sakdurunge",
+        sh_prev_image_desc: "Nuduhake gambar sakdurunge miturut urutan",
+        sh_undo: "Undo Aksi Terakhir",
+        sh_undo_desc: "Batalne pemindahan utawa penyalinan pungkasan",
+        sh_delete: "Hapus (Recycle Bin)",
+        sh_delete_desc: "Mindahake gambar menyang kranjang sampah",
+        sh_rotate_cw: "Rotasi 90° CW",
+        sh_rotate_cw_desc: "Muter gambar searah jarum jam",
+        sh_rotate_ccw: "Rotasi 90° CCW",
+        sh_rotate_ccw_desc: "Muter gambar kosok balen jarum jam",
+        sh_help: "Bukak Panduan Bantuan",
+        sh_help_desc: "Nuduhake shortcuts keyboard lan tip",
+        sh_toggle_explorer: "Tutup Explorer",
+        sh_toggle_explorer_desc: "Sembunyi/tampilake panel explorer kiwo",
+        sh_toggle_console: "Tutup Log Ngisor",
+        sh_toggle_console_desc: "Sembunyi/tampilake panel log ngisor",
+        sh_toggle_metadata: "Tutup EXIF Metadata",
+        sh_toggle_metadata_desc: "Sembunyi/tampilake panel info tengen",
+        sh_create_folder: "Gawe Folder",
+        sh_create_folder_desc: "Gawe subfolder anyar ing folder aktif",
+        sh_open_folder: "Pilih Folder Sumber",
+        sh_open_folder_desc: "Bukak folder anyar soko path"
+      },
+      "jv-tg": {
+        title: "MILAH FOTO PRO",
+        subtitle: "EDISI ELITE v2.3",
+        tab_previews: "Isi Folder",
+        tab_logs: "Catetan Aktivitas",
+        tab_presets: "Preset",
+        lbl_explorer: "Golet Folder",
+        lbl_drives: "Drive",
+        lbl_metadata: "Katrangan Gambar",
+        lbl_open_folder: "Bukak Folder",
+        lbl_new: "Anyar",
+        lbl_new_folder: "Folder Anyar",
+        lbl_no_image: "Laka gambar sing dipilih",
+        lbl_no_image_desc: "Tulung pilih folder sumber neng sebelah kiri dong ora ketik nang nduwur nggo mindai gambar.",
+        lbl_histogram: "Kurva Histogram",
+        meta_camera_exif: "Kamera EXIF",
+        meta_camera: "Kamera",
+        meta_iso: "ISO",
+        meta_aperture: "Aperture",
+        meta_shutter: "Shutter Speed",
+        meta_file_info: "Informasi Berkas",
+        meta_filename: "Aran Berkas",
+        meta_resolution: "Dimensi",
+        meta_size: "Ukuran",
+        lbl_connected: "Server Nyambung um aman bae",
+        lbl_footer_help: "Ctrl+H / F1: Panduan Shortcuts",
+        settings_title: "Pengaturane",
+        tab_hotkeys: "Hotkeys (1-9)",
+        tab_global_shortcuts: "Nggo cepetan",
+        tab_appearance: "Tampilan",
+        tab_system: "Sistem & Ekstensi",
+        lbl_hotkeys_desc: "Atur aksi mindahake otomatis kanggo angka preset [1-9].",
+        lbl_global_desc: "Pencet tombol kotakane nggo ketik kombinasi tombol anyar ning keyboard nggo ngganti shortcut.",
+        lbl_theme: "Tema Werna Aplikasi",
+        lbl_theme_desc: "Dipilih warnane disit",
+        lbl_th_size: "Ukuran Gambar Cilik",
+        lbl_animations: "Animasi & Transisi",
+        lbl_animations_desc: "Uripake animasi transisi (slide out & shrink nalika mindahake utawa mbusak)",
+        lbl_formats: "Format Gambar Sing Dipindai",
+        lbl_formats_desc: "Setelan jinis format gambar sing dipindai.",
+        lbl_general: "Umum & Keamanan",
+        lbl_ask_delete: "Tembak konfirmasi sakdurunge mbuang gambar menyang Recycle Bin",
+        lbl_lang: "Basa Aplikasi",
+        lbl_lang_desc: "Ganti basa antarmuka tampilan aplikasi.",
+        btn_save: "Simpen & Pasang",
+        btn_cancel: "Wurung",
+        btn_ok: "OK",
+        help_title: "Panduan Tombol Cepet (Shortcuts)",
+        help_nav: "Navigasi Gambar",
+        help_nav_next: "Gambar Saklanjute",
+        help_nav_prev: "Gambar Sakdurunge",
+        help_nav_undo: "Batalne Aksi Terakhir",
+        help_nav_rotate: "Rotasi (CW/CCW)",
+        help_file: "File & Panel",
+        help_file_folder: "Gawe Folder",
+        help_file_src: "Pilih Folder",
+        help_file_del: "Buang tong sampah",
+        help_file_left: "Tutup Explorer",
+        help_file_bottom: "Tutup Log Konsol",
+        help_file_right: "Tutup EXIF Metadata",
+        help_tip: "Tip Tombol [1-9]: Pencet tombol angka 1-9 ing keyboard nggo langsung mindahake gambar maring folder tujuan preset sing wis disetel.",
+        dlg_confirm_title: "Konfirmasi",
+        dlg_confirm_del_title: "Hapus Gambar",
+        dlg_confirm_del_msg: "Pindah gambar \"{file}\" maring tong sampah?",
+        dlg_create_folder_title: "Gawe Folder Anyar",
+        dlg_create_folder_msg: "Lebokna ning folder anyar:",
+        dlg_open_folder_title: "Buka Folder Sumber",
+        dlg_open_folder_msg: "Tempel path absolut direktori gambar sampeyan (soko File Explorer):",
+        dlg_preset_title: "Setel Preset {key} Tujuan",
+        dlg_preset_msg: "Tempel path absolut folder tujuan kanggo preset iki:",
+        log_ready: "Sistem wis siyap. Monggo bukak folder liwat Explorer.",
+        log_scan_dir: "Mindai folder: {path}. Ketemu {count} gambar.",
+        log_create_folder_ok: "Folder kasil digawe: {name}",
+        log_create_folder_err: "Ora bisa gawe folder: {err}",
+        log_rotate_ok: "Rotasi {degrees}° kasil: {file}",
+        log_rotate_err: "Gagal rotasi: {err}",
+        log_action_ok: "Kasil {action}: {file} -> {target}",
+        log_action_err: "Gagal: {err}",
+        log_undo_ok: "Undo kasil: {msg}",
+        log_undo_err: "Undo gagal: {err}",
+        log_clear: "Catetan aktivitas wis diresiki.",
+        log_save_settings: "Setelan kasil disimpen lan dipasang.",
+        sz_small: "Cilik",
+        sz_medium: "Sedheng",
+        sz_large: "Gedhe",
+        lbl_move: "Mindah",
+        lbl_copy: "Nyalin",
+        lbl_target_placeholder: "C:\\Path\\menyang\\folder\\tujuan",
+        lbl_browse: "Golet",
+        lbl_press_key: "Pencet tombol...",
+        lbl_no_images_in_folder: "Folder kie laka gambare.",
+        sh_next_image: "Gambar Saklanjute",
+        sh_next_image_desc: "Nuduhake gambar saklanjute miturut urutan",
+        sh_prev_image: "Gambar Sakdurunge",
+        sh_prev_image_desc: "Nuduhake gambar sakdurunge miturut urutan",
+        sh_undo: "Undo Aksi Terakhir",
+        sh_undo_desc: "Batalne pemindahan utawa penyalinan pungkasan",
+        sh_delete: "Hapus (tong sampah)",
+        sh_delete_desc: "Mindahake gambar maring tong sampah",
+        sh_rotate_cw: "Rotasi 90° CW",
+        sh_rotate_cw_desc: "Muter gambar searah jarum jam",
+        sh_rotate_ccw: "Rotasi 90° CCW",
+        sh_rotate_ccw_desc: "Muter gambar kosok balen jarum jam",
+        sh_help: "Bukak Panduan Bantuan",
+        sh_help_desc: "Nuduhake shortcuts keyboard lan tip",
+        sh_toggle_explorer: "Tutup Explorer",
+        sh_toggle_explorer_desc: "Sembunyi/tampilake panel explorer kiwa",
+        sh_toggle_console: "Tutup Log Ngisor",
+        sh_toggle_console_desc: "Sembunyi/tampilake panel log ngisor",
+        sh_toggle_metadata: "Tutup EXIF Metadata",
+        sh_toggle_metadata_desc: "Sembunyi/tampilake panel info tengen",
+        sh_create_folder: "Gawe Folder",
+        sh_create_folder_desc: "Gawe subfolder anyar ing folder aktif",
+        sh_open_folder: "Pilih Folder Sumber",
+        sh_open_folder_desc: "Bukak folder anyar soko path"
+      }
+    };
+
+    // Translator helper function
+    function t(key, replacements = {}) {
+      const lang = state.lang || 'en';
+      let text = (TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) || (TRANSLATIONS['en'][key]) || key;
+      Object.entries(replacements).forEach(([k, v]) => {
+        text = text.replace(`{${k}}`, v);
+      });
+      return text;
+    }
+
+    // Dynamic UI language application
+    function applyLanguage(lang) {
+      state.lang = lang;
+
+      // 1. Translate all DOM elements with data-i18n
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.innerText = t(key);
+      });
+
+      // 2. Translate document page title
+      document.title = t('title');
+
+      // 3. Translate breadcrumbs input placeholder
+      const addrInput = document.getElementById('address-bar');
+      if (addrInput) {
+        if (lang === 'id' || lang === 'jv' || lang === 'jv-tg') {
+          addrInput.placeholder = "Path direktori...";
+        } else if (lang === 'zh') {
+          addrInput.placeholder = "目录路径...";
+        } else if (lang === 'ja') {
+          addrInput.placeholder = "ディレクトリパス...";
+        } else if (lang === 'pt') {
+          addrInput.placeholder = "Caminho do diretório...";
+        } else {
+          addrInput.placeholder = "Directory path...";
+        }
+      }
+    }
+
+    // State management
+    let state = {
+      currentFolder: '',
+      images: [],
+      currentIndex: -1,
+      hotkeys: {},
+      extensions: ['.jpg', '.jpeg', '.png', '.webp'],
+      drives: [],
+      folderHistory: [],
+      panelStates: { left: true, bottom: true, right: true },
+      panelSizes: { left: 256, bottom: 224, right: 256 },
+      global_shortcuts: {},
+      lang: 'en',
+      custom_hotkeys: [],
+      disabled_global_shortcuts: [],  // list of action names
+      disabled_preset_keys: [],        // list of '1'-'9' strings
+      isThisPC: false,
+      pinned_folders: [],
+      last_folder: '',
+      last_index: 0
+    };
+
+    // ================================================================
+    // CONFLICT DETECTION ENGINE
+    // ================================================================
+
+    // Known browser shortcuts and their risk level
+    const BROWSER_RESERVED = new Map([
+      ['Ctrl+W',         {level:'critical', desc:'Menutup tab browser'}],
+      ['Ctrl+T',         {level:'critical', desc:'Membuka tab baru'}],
+      ['Ctrl+R',         {level:'critical', desc:'Refresh halaman (browser)'}],
+      ['F5',             {level:'critical', desc:'Refresh halaman (browser)'}],
+      ['Ctrl+Shift+R',   {level:'critical', desc:'Hard refresh browser'}],
+      ['Alt+F4',         {level:'critical', desc:'Menutup window (OS)'}],
+      ['F12',            {level:'warning',  desc:'Buka DevTools browser'}],
+      ['Ctrl+Shift+I',   {level:'warning',  desc:'Buka DevTools browser'}],
+      ['Ctrl+Shift+J',   {level:'warning',  desc:'DevTools Console browser'}],
+      ['Ctrl+F',         {level:'warning',  desc:'Pencarian halaman (browser)'}],
+      ['Ctrl+P',         {level:'warning',  desc:'Print halaman (browser)'}],
+      ['Ctrl+S',         {level:'warning',  desc:'Simpan halaman (browser)'}],
+      ['Ctrl+H',         {level:'warning',  desc:'Riwayat browser'}],
+      ['Ctrl+D',         {level:'warning',  desc:'Bookmark halaman (browser)'}],
+      ['Ctrl+J',         {level:'warning',  desc:'Unduhan browser'}],
+      ['Ctrl+U',         {level:'warning',  desc:'Lihat source code (browser)'}],
+      ['Ctrl+Tab',       {level:'warning',  desc:'Pindah antar tab browser'}],
+      ['Ctrl+Shift+Tab', {level:'warning',  desc:'Pindah antar tab browser'}],
+      ['Ctrl+Shift+T',   {level:'warning',  desc:'Buka tab terakhir (browser)'}],
+      ['Ctrl+N',         {level:'warning',  desc:'Jendela baru browser'}],
+      ['F11',            {level:'info',     desc:'Fullscreen browser'}],
+      ['Ctrl+A',         {level:'info',     desc:'Pilih semua teks (browser)'}],
+      ['Ctrl+C',         {level:'info',     desc:'Copy (browser)'}],
+      ['Ctrl+V',         {level:'info',     desc:'Paste (browser)'}],
+      ['Ctrl+X',         {level:'info',     desc:'Cut (browser)'}],
+      ['Ctrl+Z',         {level:'info',     desc:'Undo (browser)'}],
+      ['Ctrl+Y',         {level:'info',     desc:'Redo (browser)'}],
+    ]);
+
+    /**
+     * Build a live registry from current settings modal form values.
+     * Each entry: {key, sourceId, sourceLabel, enabled, source}
+     */
+    function buildLiveRegistry() {
+      const registry = [];
+
+      // Global shortcuts (from form)
+      GLOBAL_ACTION_KEYS.forEach(actionName => {
+        const el = document.getElementById(`sh-${actionName}`);
+        if (!el || !el.value || el.value === 'None') return;
+        const toggleEl = document.getElementById(`toggle-global-${actionName}`);
+        const enabled = toggleEl ? toggleEl.checked : true;
+        registry.push({
+          key: el.value,
+          source: 'global',
+          sourceId: `global_${actionName}`,
+          sourceLabel: `Global: ${t('sh_' + actionName) || actionName}`,
+          enabled
+        });
+      });
+
+      // Preset hotkeys (1-9) from form
+      for (let i = 1; i <= 9; i++) {
+        const keyStr = String(i);
+        const targetEl = document.getElementById(`set-target-${keyStr}`);
+        const toggleEl = document.getElementById(`toggle-preset-${keyStr}`);
+        if (!targetEl || !targetEl.value.trim()) continue;
+        const enabled = toggleEl ? toggleEl.checked : true;
+        const actionEl = document.getElementById(`set-action-${keyStr}`);
+        registry.push({
+          key: keyStr,
+          source: 'preset',
+          sourceId: `preset_${keyStr}`,
+          sourceLabel: `Preset [${keyStr}]: ${actionEl ? actionEl.value.toUpperCase() : ''} → ${targetEl.value.split(/[\\/]/).pop()}`,
+          enabled
+        });
+      }
+
+      // Custom hotkeys from edit buffer
+      (_customHotkeysEdit || []).forEach((h, idx) => {
+        if (!h.key) return;
+        registry.push({
+          key: h.key,
+          source: 'custom',
+          sourceId: `custom_${idx}`,
+          sourceLabel: `Custom [${h.key}]${h.label ? ': ' + h.label : ''} (${h.action.toUpperCase()})`,
+          enabled: h.enabled !== false
+        });
+      });
+
+      return registry;
+    }
+
+    /**
+     * Get conflicts for a given key string, optionally excluding one sourceId (self).
+     * Returns {app: [{sourceId, sourceLabel, enabled}], browser: {level, desc} | null}
+     */
+    function getConflictsForKey(keyStr, excludeSourceId = null) {
+      if (!keyStr || keyStr === 'None') return { app: [], browser: null };
+      const registry = buildLiveRegistry();
+      const app = registry.filter(r => r.key === keyStr && r.sourceId !== excludeSourceId);
+      const browser = BROWSER_RESERVED.get(keyStr) || null;
+      return { app, browser };
+    }
+
+    /** Render conflict badge HTML string for a key */
+    function renderConflictBadgesHtml(conflicts, selfLabel) {
+      if (!conflicts) return '';
+      let html = '<div class="conflict-row">';
+      // App-internal conflicts
+      conflicts.app.forEach(c => {
+        if (c.sourceLabel === selfLabel) return;
+        html += `<span class="conflict-badge conflict-app" title="Bentrok dengan shortcut lain di aplikasi">⚡ ${c.sourceLabel}</span>`;
+      });
+      // Browser conflict
+      if (conflicts.browser) {
+        const cls = `conflict-${conflicts.browser.level}`;
+        const icon = conflicts.browser.level === 'critical' ? '🚫' : conflicts.browser.level === 'warning' ? '⚠️' : 'ℹ️';
+        html += `<span class="conflict-badge ${cls}" title="${conflicts.browser.desc}">${icon} Browser: ${conflicts.browser.desc}</span>`;
+      }
+      html += '</div>';
+      return (conflicts.app.length > 0 || conflicts.browser) ? html : '';
+    }
+
+    /** Build the full conflict summary and update the banner */
+    function refreshConflictSummary() {
+      const bar = document.getElementById('conflict-summary-bar');
+      const title = document.getElementById('conflict-summary-title');
+      const detail = document.getElementById('conflict-summary-detail');
+      if (!bar) return;
+
+      const registry = buildLiveRegistry();
+      const issues = [];
+
+      // Check all registered keys for app duplicates and browser conflicts
+      const seen = new Map();
+      registry.forEach(r => {
+        if (!r.key) return;
+        if (!seen.has(r.key)) seen.set(r.key, []);
+        seen.get(r.key).push(r);
+      });
+
+      seen.forEach((entries, key) => {
+        if (entries.length > 1) {
+          const labels = entries.map(e => e.sourceLabel).join(', ');
+          issues.push({ level: 'app', key, msg: `Tombol <b>${key}</b> terdaftar di beberapa shortcut: ${labels}` });
+        }
+        const browser = BROWSER_RESERVED.get(key);
+        if (browser) {
+          const registeredLabels = entries.map(e => e.sourceLabel).join(', ');
+          issues.push({ level: browser.level, key, msg: `Tombol <b>${key}</b> (${registeredLabels}) bentrok dengan browser: ${browser.desc}` });
+        }
+      });
+
+      if (issues.length === 0) {
+        bar.classList.add('hidden');
+        return;
+      }
+
+      bar.classList.remove('hidden');
+      const appIssues = issues.filter(i => i.level === 'app').length;
+      const critIssues = issues.filter(i => i.level === 'critical').length;
+      const warnIssues = issues.filter(i => ['warning', 'info'].includes(i.level)).length;
+
+      let summaryText = [];
+      if (appIssues) summaryText.push(`${appIssues} konflik antar shortcut`);
+      if (critIssues) summaryText.push(`${critIssues} bentrok kritis browser`);
+      if (warnIssues) summaryText.push(`${warnIssues} peringatan browser`);
+      title.textContent = `⚠ ${summaryText.join(' · ')} — Nonaktifkan salah satu via toggle`;
+
+      detail.innerHTML = issues.map(i => {
+        const cls = i.level === 'app' ? 'conflict-app' : `conflict-${i.level}`;
+        return `<div class="conflict-badge ${cls} w-full">${i.msg}</div>`;
+      }).join('');
+    }
+
+    function toggleConflictDetail() {
+      const detail = document.getElementById('conflict-summary-detail');
+      const btn = document.getElementById('conflict-detail-toggle');
+      if (!detail || !btn) return;
+      detail.classList.toggle('hidden');
+      btn.textContent = detail.classList.contains('hidden') ? '▼ Detail' : '▲ Tutup';
+    }
+
+
+
+    // ----- Performance: Thumbnail lazy loader -----
+    // IntersectionObserver to lazily load thumbnails in filmstrip
+    let _thumbObserver = null;
+    function getThumbObserver() {
+      if (!_thumbObserver) {
+        _thumbObserver = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const img = entry.target;
+              if (img.dataset.src) {
+                img.src = img.dataset.src;
+                delete img.dataset.src;
+                _thumbObserver.unobserve(img);
+              }
+            }
+          });
+        }, { rootMargin: '0px 300px 0px 300px', threshold: 0 });
+      }
+      return _thumbObserver;
+    }
+
+    // ----- Performance: Preload cache -----
+    // Preload next/prev full images into browser cache so navigation is instant
+    const _preloadCache = new Set();
+    function preloadImage(path) {
+      const url = `/api/image?path=${encodeURIComponent(path)}`;
+      if (_preloadCache.has(url)) return;
+      _preloadCache.add(url);
+      const img = new Image();
+      img.src = url;
+    }
+
+    function preloadNeighbors(index) {
+      const neighbors = [index + 1, index + 2, index - 1];
+      neighbors.forEach(i => {
+        if (i >= 0 && i < state.images.length) {
+          const path = `${state.currentFolder}/${state.images[i]}`;
+          preloadImage(path);
+        }
+      });
+    }
+
+    function dismissGithubModal() {
+      const modal = document.getElementById('github-follow-modal');
+      if (modal) modal.classList.add('hidden');
+      localStorage.setItem('github_follow_prompt_dismissed', 'true');
+    }
+
+    // Initialize application
+    window.addEventListener('DOMContentLoaded', async () => {
+      lucide.createIcons();
+      initResizers();
+      setupGlobalBindings();
+      startDrivePolling();
+
+      await fetchDrives();
+      await fetchSession();
+      await fetchSettings();
+
+      applyLanguage(state.lang || 'en');
+      logMsg(t('log_ready'));
+
+      // Check if session has a valid last folder to resume
+      if (state.last_folder) {
+        logMsg(`Memulihkan sesi aplikasi sebelumnya: ${state.last_folder}`);
+        await navigateToPath(state.last_folder);
+        if (state.last_index > 0 && state.images.length > state.last_index) {
+          state.currentIndex = state.last_index;
+          displayCurrentImage();
+        }
+      } else {
+        loadThisPC();
+      }
+
+      // First-launch non-forcing GitHub Follow Pop-up Modal
+      if (!localStorage.getItem('github_follow_prompt_dismissed')) {
+        setTimeout(() => {
+          const m = document.getElementById('github-follow-modal');
+          if (m) m.classList.remove('hidden');
+        }, 1200);
+      }
+    });
+
+    // Session recovery from backend
+    async function fetchSession() {
+      try {
+        const res = await fetch('/api/session');
+        const data = await res.json();
+        state.last_folder = data.last_folder || "";
+        state.last_index = data.last_index || 0;
+        state.pinned_folders = data.pinned_folders || [];
+        if (data.layout) {
+          state.layout = data.layout;
+          updateLayoutDOM();
+        }
+        renderPinnedFolders();
+      } catch (e) {
+        console.warn("Gagal memuat session", e);
+      }
+    }
+
+    // ----- Customizable Layout System -----
+    function toggleLayoutDropdown(e) {
+      if (e) e.stopPropagation();
+      const drop = document.getElementById('layout-dropdown');
+      if (drop) drop.classList.toggle('hidden');
+    }
+
+    document.addEventListener('click', (e) => {
+      const drop = document.getElementById('layout-dropdown');
+      const btn = document.getElementById('btn-layout-menu');
+      if (drop && !drop.classList.contains('hidden') && btn && !btn.contains(e.target) && !drop.contains(e.target)) {
+        drop.classList.add('hidden');
+      }
+    });
+
+    function setWidgetDock(widgetId, dockLocation) {
+      if (!state.layout) state.layout = {};
+      if (!state.layout.docks) {
+        state.layout.docks = { explorer: 'left', inspector: 'right', console: 'bottom' };
+      }
+      state.layout.docks[widgetId] = dockLocation;
+      updateLayoutDOM();
+      saveLayoutSession();
+      logMsg(`Dock widget '${widgetId}' dipindah ke: ${dockLocation}`, 'info');
+    }
+
+    function applyLayoutPreset(presetName) {
+      if (!state.layout) state.layout = {};
+      state.layout.preset = presetName;
+      if (!state.layout.docks) state.layout.docks = {};
+
+      if (presetName === 'standard') {
+        state.layout.show_stage = true;
+        state.layout.docks = { explorer: 'left', inspector: 'right', console: 'bottom' };
+      } else if (presetName === 'comparison') {
+        state.layout.show_stage = true;
+        state.layout.docks = { explorer: 'left', inspector: 'right', console: 'hidden' };
+      } else if (presetName === 'right_presets') {
+        state.layout.show_stage = true;
+        state.layout.docks = { explorer: 'hidden', inspector: 'right', console: 'right' };
+      } else if (presetName === 'minimal') {
+        state.layout.show_stage = true;
+        state.layout.docks = { explorer: 'hidden', inspector: 'hidden', console: 'hidden' };
+      }
+
+      updateLayoutDOM();
+      displayCurrentImage();
+      saveLayoutSession();
+      logMsg(`Layout diubah ke mode: ${presetName}`, 'info');
+    }
+
+    function toggleStageCarousel() {
+      if (!state.layout) state.layout = {};
+      state.layout.show_stage = !(state.layout.show_stage !== false);
+      updateLayoutDOM();
+      displayCurrentImage();
+      saveLayoutSession();
+    }
+
+    function updateLayoutDOM() {
+      const l = state.layout || {};
+      const docks = l.docks || { explorer: 'left', inspector: 'right', console: 'bottom' };
+
+      const leftPanel = document.getElementById('left-panel');
+      const rightPanel = document.getElementById('right-panel');
+      const bottomPanel = document.getElementById('bottom-panel');
+
+      const widgetExplorer = document.getElementById('widget-explorer');
+      const widgetInspector = document.getElementById('widget-inspector');
+      const widgetConsole = document.getElementById('widget-console');
+
+      const appendToDock = (widgetEl, dockName) => {
+        if (!widgetEl) return;
+        if (dockName === 'left' && leftPanel) {
+          widgetEl.classList.remove('hidden');
+          leftPanel.appendChild(widgetEl);
+        } else if (dockName === 'right' && rightPanel) {
+          widgetEl.classList.remove('hidden');
+          rightPanel.appendChild(widgetEl);
+        } else if (dockName === 'bottom' && bottomPanel) {
+          widgetEl.classList.remove('hidden');
+          bottomPanel.appendChild(widgetEl);
+        } else {
+          widgetEl.classList.add('hidden');
+        }
+      };
+
+      appendToDock(widgetExplorer, docks.explorer);
+      appendToDock(widgetInspector, docks.inspector);
+      appendToDock(widgetConsole, docks.console);
+
+      const updatePanelVisibility = (panelEl, resizerEl) => {
+        if (!panelEl) return;
+        const visibleChild = Array.from(panelEl.children).some(c => !c.classList.contains('hidden'));
+        if (visibleChild) {
+          panelEl.classList.remove('hidden');
+          if (resizerEl) resizerEl.classList.remove('hidden');
+        } else {
+          panelEl.classList.add('hidden');
+          if (resizerEl) resizerEl.classList.add('hidden');
+        }
+      };
+
+      const resizerLeft = document.getElementById('resizer-left');
+      const resizerRight = document.getElementById('resizer-right');
+      const resizerBottom = document.getElementById('resizer-bottom');
+
+      updatePanelVisibility(leftPanel, resizerLeft);
+      updatePanelVisibility(rightPanel, resizerRight);
+      updatePanelVisibility(bottomPanel, resizerBottom);
+
+      const selExp = document.getElementById('sel-dock-explorer');
+      const selInsp = document.getElementById('sel-dock-inspector');
+      const selCon = document.getElementById('sel-dock-console');
+      if (selExp) selExp.value = docks.explorer || 'left';
+      if (selInsp) selInsp.value = docks.inspector || 'right';
+      if (selCon) selCon.value = docks.console || 'bottom';
+
+      const cardPrev = document.getElementById('stage-card-prev');
+      const cardNext = document.getElementById('stage-card-next');
+      const btnCarousel = document.getElementById('btn-toggle-carousel');
+      const lblCarousel = document.getElementById('lbl-carousel-mode');
+
+      if (l.show_stage !== false) {
+        if (cardPrev) cardPrev.classList.remove('hidden');
+        if (cardNext) cardNext.classList.remove('hidden');
+        if (btnCarousel) btnCarousel.classList.add('bg-brand-blue/20', 'border-brand-blue', 'text-brand-blue');
+        if (lblCarousel) lblCarousel.innerText = 'Compare Mode (ON)';
+      } else {
+        if (cardPrev) cardPrev.classList.add('hidden');
+        if (cardNext) cardNext.classList.add('hidden');
+        if (btnCarousel) btnCarousel.classList.remove('bg-brand-blue/20', 'border-brand-blue', 'text-brand-blue');
+        if (lblCarousel) lblCarousel.innerText = 'Compare Mode (OFF)';
+      }
+
+      renderImagePreviews();
+    }
+
+    async function saveLayoutSession() {
+      if (!state.layout) return;
+      try {
+        await fetch('/api/session-layout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(state.layout)
+        });
+      } catch (e) {
+        console.warn("Failed saving layout session", e);
+      }
+    }
+
+    function togglePanel(type) {
+      if (!state.layout) state.layout = {};
+      if (!state.layout.docks) state.layout.docks = { explorer: 'left', inspector: 'right', console: 'bottom' };
+      const widgetKey = type === 'left' ? 'explorer' : (type === 'right' ? 'inspector' : 'console');
+      const currentDock = state.layout.docks[widgetKey];
+      const defaultDock = type === 'left' ? 'left' : (type === 'right' ? 'right' : 'bottom');
+      const newDock = currentDock === 'hidden' ? defaultDock : 'hidden';
+      setWidgetDock(widgetKey, newDock);
+    }
+
+    // Save active folder & index session
+    async function updateSessionIndex() {
+      if (state.currentFolder && state.currentIndex >= 0) {
+        try {
+          await fetch(`/api/session-index?folder=${encodeURIComponent(state.currentFolder)}&index=${state.currentIndex}`, {
+            method: 'POST'
+          });
+        } catch (e) {
+          console.warn("Gagal menyimpan indeks sesi", e);
+        }
+      }
+    }
+
+    // Path cleaner (removes quotes, trims spaces, handles "This PC\" prefixes for drive letters and MTP paths)
+    function cleanPath(inputPath) {
+      if (!inputPath) return "";
+      let p = inputPath.trim();
+      if ((p.startsWith('"') && p.endsWith('"')) || (p.startsWith("'") && p.endsWith("'"))) {
+        p = p.slice(1, -1).trim();
+      }
+      p = p.replace(/\//g, '\\');
+      
+      if (p.toLowerCase() === "this pc" || p.toLowerCase() === "computer") {
+        return "This PC";
+      }
+
+      // If user pasted "This PC\Local Disk (C:)\..." or "This PC\D:\..."
+      if (p.toLowerCase().startsWith("this pc\\")) {
+        let sub = p.substring(8).trim();
+        if (sub.length >= 2 && sub[1] === ':') {
+          return sub;
+        }
+        if (sub.toLowerCase().startsWith("local disk (") && sub.indexOf("):") > 0) {
+          const letterIdx = sub.indexOf("):");
+          const driveLetter = sub.substring(letterIdx - 1, letterIdx + 1);
+          const rest = sub.substring(letterIdx + 2).replace(/^[\\]+/, "");
+          return rest ? `${driveLetter}\\${rest}` : `${driveLetter}\\`;
+        }
+      }
+      return p;
+    }
+
+    // Quick Access / Pin to Start handlers
+    async function togglePinCurrentFolder() {
+      if (!state.currentFolder) return;
+      const path = cleanPath(state.currentFolder);
+      if (!state.pinned_folders) state.pinned_folders = [];
+
+      const idx = state.pinned_folders.indexOf(path);
+      if (idx >= 0) {
+        state.pinned_folders.splice(idx, 1);
+        logMsg(`Lepas sematan folder: ${path}`);
+      } else {
+        state.pinned_folders.push(path);
+        logMsg(`Folder disematkan ke Akses Cepat: ${path}`, 'success');
+      }
+      await savePinnedFolders();
+      updatePinButtonState();
+      renderPinnedFolders();
+    }
+
+    async function unpinFolder(path) {
+      if (!state.pinned_folders) return;
+      state.pinned_folders = state.pinned_folders.filter(p => p !== path);
+      await savePinnedFolders();
+      updatePinButtonState();
+      renderPinnedFolders();
+    }
+
+    async function savePinnedFolders() {
+      try {
+        await fetch('/api/pinned-folders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pinned_folders: state.pinned_folders || [] })
+        });
+      } catch (e) {
+        logMsg("Gagal menyimpan pinned folders", 'error');
+      }
+    }
+
+    function updatePinButtonState() {
+      const pinBtn = document.getElementById('btn-pin-folder');
+      if (!pinBtn) return;
+      if (!state.currentFolder) {
+        pinBtn.style.opacity = '0.4';
+        pinBtn.disabled = true;
+        return;
+      }
+      pinBtn.disabled = false;
+      pinBtn.style.opacity = '1';
+      const isPinned = (state.pinned_folders || []).includes(cleanPath(state.currentFolder));
+      if (isPinned) {
+        pinBtn.className = "p-1 rounded bg-brand-blue/20 text-brand-blue transition";
+        pinBtn.title = "Lepas sematan folder ini";
+      } else {
+        pinBtn.className = "p-1 rounded hover:bg-zinc-800 text-zinc-500 hover:text-brand-blue transition";
+        pinBtn.title = "Pin folder ini ke Quick Access / Start";
+      }
+    }
+
+    function renderPinnedFolders() {
+      const sidebarList = document.getElementById('pinned-sidebar-list');
+      const countEl = document.getElementById('pinned-count');
+      const mainGrid = document.getElementById('pinned-grid');
+
+      const pinned = state.pinned_folders || [];
+      if (countEl) countEl.innerText = pinned.length;
+
+      if (sidebarList) {
+        if (pinned.length === 0) {
+          sidebarList.innerHTML = `<div class="text-[10px] text-zinc-600 italic px-1 py-1">Belum ada folder di-pin</div>`;
+        } else {
+          sidebarList.innerHTML = pinned.map(p => {
+            const name = p.split(/[\\/]/).filter(Boolean).pop() || p;
+            const safePath = p.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            return `
+              <div onclick="navigateToPath('${safePath}')" class="flex items-center justify-between px-2 py-1 bg-zinc-900/60 hover:bg-zinc-800 rounded cursor-pointer group text-xs transition">
+                <div class="flex items-center gap-1.5 truncate">
+                  <i data-lucide="folder" class="w-3.5 h-3.5 text-brand-accent shrink-0"></i>
+                  <span class="text-zinc-300 group-hover:text-white truncate font-medium">${name}</span>
+                </div>
+                <button onclick="event.stopPropagation(); unpinFolder('${safePath}')" class="p-0.5 rounded hover:bg-red-950 text-zinc-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition" title="Unpin">
+                  <i data-lucide="x" class="w-3 h-3"></i>
+                </button>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      if (mainGrid) {
+        if (pinned.length === 0) {
+          mainGrid.innerHTML = `<div class="text-xs text-zinc-600 italic col-span-full">Klik ikon 📌 di bilah alamat untuk menyematkan folder favorit Anda ke sini.</div>`;
+        } else {
+          mainGrid.innerHTML = pinned.map(p => {
+            const name = p.split(/[\\/]/).filter(Boolean).pop() || p;
+            const safePath = p.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            return `
+              <div onclick="navigateToPath('${safePath}')" class="p-3 bg-zinc-900 border border-brand-border rounded-xl hover:border-brand-blue cursor-pointer transition flex items-center justify-between group">
+                <div class="flex items-center gap-2.5 truncate">
+                  <div class="p-2 rounded-lg bg-zinc-950 text-brand-accent border border-brand-border">
+                    <i data-lucide="folder" class="w-5 h-5"></i>
+                  </div>
+                  <div class="truncate">
+                    <h4 class="text-xs font-semibold text-white group-hover:text-brand-accent truncate">${name}</h4>
+                    <p class="text-[10px] text-zinc-500 font-mono truncate">${p}</p>
+                  </div>
+                </div>
+                <button onclick="event.stopPropagation(); unpinFolder('${safePath}')" class="p-1 rounded hover:bg-red-950 text-zinc-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition" title="Unpin">
+                  <i data-lucide="pin-off" class="w-4 h-4"></i>
+                </button>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+      lucide.createIcons();
+    }
+
+    // Logging function
+    function logMsg(message, type = 'info') {
+      const logTab = document.getElementById('tab-logs');
+      const timestamp = new Date().toTimeString().split(' ')[0];
+
+      let badge = `<span class="text-zinc-500">[${timestamp}]</span>`;
+      if (type === 'success') badge += ` <span class="bg-emerald-950 text-brand-success px-1.5 py-0.5 rounded font-bold uppercase text-[9px] mr-1">MOVE</span>`;
+      else if (type === 'error') badge += ` <span class="bg-red-950 text-brand-danger px-1.5 py-0.5 rounded font-bold uppercase text-[9px] mr-1">ERROR</span>`;
+      else if (type === 'undo') badge += ` <span class="bg-blue-950 text-brand-accent px-1.5 py-0.5 rounded font-bold uppercase text-[9px] mr-1">UNDO</span>`;
+      else badge += ` <span class="bg-zinc-900 text-zinc-400 px-1.5 py-0.5 rounded font-bold uppercase text-[9px] mr-1">SYS</span>`;
+
+      logTab.innerHTML += `<div class="py-0.5">${badge} <span class="text-zinc-300">${message}</span></div>`;
+      logTab.scrollTop = logTab.scrollHeight;
+    }
+
+    function clearLogs() {
+      document.getElementById('tab-logs').innerHTML = '';
+      logMsg(t('log_clear'));
+    }
+
+    // Reusable Custom Dialog Modal handler (replacing prompt/confirm/alert)
+    function showCustomDialog({ title, message, type = 'alert', placeholder = '', defaultValue = '', onOk }) {
+      const modal = document.getElementById('custom-dialog-modal');
+      const titleEl = document.getElementById('dialog-title');
+      const msgEl = document.getElementById('dialog-message');
+      const inputEl = document.getElementById('dialog-input');
+      const btnCancel = document.getElementById('dialog-btn-cancel');
+      const btnOk = document.getElementById('dialog-btn-ok');
+      const iconEl = document.getElementById('dialog-icon');
+
+      titleEl.innerText = title;
+      msgEl.innerText = message;
+
+      // Set appropriate icon
+      let iconName = 'help-circle';
+      let iconColor = 'text-brand-blue';
+      if (type === 'prompt') {
+        iconName = 'edit-3';
+        iconColor = 'text-brand-accent';
+      } else if (type === 'alert') {
+        iconName = 'alert-circle';
+        iconColor = 'text-brand-danger';
+      }
+      iconEl.setAttribute('data-lucide', iconName);
+      iconEl.className = `w-5 h-5 ${iconColor}`;
+
+      if (type === 'prompt') {
+        inputEl.classList.remove('hidden');
+        inputEl.placeholder = placeholder;
+        inputEl.value = defaultValue;
+      } else {
+        inputEl.classList.add('hidden');
+      }
+
+      if (type === 'alert') {
+        btnCancel.classList.add('hidden');
+      } else {
+        btnCancel.classList.remove('hidden');
+      }
+
+      const handleOk = () => {
+        const val = type === 'prompt' ? inputEl.value.trim() : true;
+        modal.classList.add('hidden');
+        cleanup();
+        if (onOk) onOk(val);
+      };
+
+      const handleCancel = () => {
+        modal.classList.add('hidden');
+        cleanup();
+      };
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+          handleOk();
+        } else if (e.key === 'Escape') {
+          handleCancel();
+        }
+      };
+
+      function cleanup() {
+        btnOk.onclick = null;
+        btnCancel.onclick = null;
+        inputEl.onkeydown = null;
+      }
+
+      btnOk.onclick = handleOk;
+      btnCancel.onclick = handleCancel;
+      inputEl.onkeydown = handleKeyDown;
+
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+
+      if (type === 'prompt') {
+        setTimeout(() => {
+          inputEl.focus();
+          inputEl.select();
+        }, 50);
+      }
+    }
+
+    // Panel Show/Hide Toggle
+    function togglePanel(panel) {
+      const elements = {
+        left: document.getElementById('left-panel'),
+        bottom: document.getElementById('bottom-panel'),
+        right: document.getElementById('right-panel')
+      };
+      const resizers = {
+        left: document.getElementById('resizer-left'),
+        bottom: document.getElementById('resizer-bottom'),
+        right: document.getElementById('resizer-right')
+      };
+
+      state.panelStates[panel] = !state.panelStates[panel];
+
+      if (state.panelStates[panel]) {
+        elements[panel].style.display = 'flex';
+        resizers[panel].style.display = 'block';
+        logMsg(`Menampilkan panel ${panel}.`);
+      } else {
+        elements[panel].style.display = 'none';
+        resizers[panel].style.display = 'none';
+        logMsg(`Menyembunyikan panel ${panel}.`);
+      }
+    }
+
+    // Tab control
+    function setBottomTab(tab) {
+      const btnPreviews = document.getElementById('tab-btn-previews');
+      const btnLogs = document.getElementById('tab-btn-logs');
+      const btnPresets = document.getElementById('tab-btn-presets');
+
+      const viewPreviews = document.getElementById('tab-previews');
+      const viewLogs = document.getElementById('tab-logs');
+      const viewPresets = document.getElementById('tab-presets');
+
+      const btnClearLogs = document.getElementById('btn-clear-logs');
+
+      // Reset styles
+      [btnPreviews, btnLogs, btnPresets].forEach(b => {
+        if (b) b.className = 'text-xs px-3 py-1.5 border-b-2 border-transparent font-medium text-zinc-400 hover:text-white transition flex items-center gap-1.5';
+      });
+      [viewPreviews, viewLogs, viewPresets].forEach(v => {
+        if (v) v.classList.add('hidden');
+      });
+      if (btnClearLogs) btnClearLogs.classList.add('hidden');
+
+      if (tab === 'previews') {
+        if (btnPreviews) btnPreviews.className = 'text-xs px-3 py-1.5 border-b-2 border-brand-blue font-medium text-white transition flex items-center gap-1.5';
+        if (viewPreviews) viewPreviews.classList.remove('hidden');
+      } else if (tab === 'logs') {
+        if (btnLogs) btnLogs.className = 'text-xs px-3 py-1.5 border-b-2 border-brand-blue font-medium text-white transition flex items-center gap-1.5';
+        if (viewLogs) viewLogs.classList.remove('hidden');
+        if (btnClearLogs) btnClearLogs.classList.remove('hidden');
+      } else if (tab === 'presets') {
+        if (btnPresets) btnPresets.className = 'text-xs px-3 py-1.5 border-b-2 border-brand-blue font-medium text-white transition flex items-center gap-1.5';
+        if (viewPresets) viewPresets.classList.remove('hidden');
+      }
+    }
+
+    // Load drives/roots with background polling support
+    let _drivePollInterval = null;
+    function startDrivePolling() {
+      if (_drivePollInterval) clearInterval(_drivePollInterval);
+      _drivePollInterval = setInterval(async () => {
+        await fetchDrives(true); // silent polling
+      }, 4000);
+    }
+
+    async function fetchDrives(silent = false) {
+      try {
+        const res = await fetch('/api/drives');
+        const newDrives = await res.json();
+        const oldKeys = (state.drives || []).map(d => d.path).join(',');
+        const newKeys = (newDrives || []).map(d => d.path).join(',');
+        state.drives = newDrives;
+
+        const sel = document.getElementById('drive-selector');
+        if (sel) {
+          const currentSel = sel.value;
+          sel.innerHTML = state.drives.map(d => `<option value="${d.path}">${d.name}</option>`).join('');
+          if (currentSel && state.drives.some(d => d.path === currentSel)) {
+            sel.value = currentSel;
+          }
+        }
+
+        if (oldKeys !== newKeys && !silent) {
+          logMsg(`Sistem drive diperbarui (${newDrives.length} drive)`);
+        }
+        if (state.isThisPC) {
+          renderThisPCDashboard();
+        }
+      } catch (e) {
+        if (!silent) logMsg(`Gagal memuat drive: ${e}`, 'error');
+      }
+    }
+
+    async function loadDrive(path) {
+      state.isThisPC = false;
+      document.getElementById('address-bar').value = path;
+      const tree = document.getElementById('directory-tree');
+      tree.innerHTML = '';
+
+      if (cleanPath(path).toLowerCase().startsWith('this pc\\')) {
+        await navigateToPath(path);
+      } else {
+        await renderSubdirs(path, tree, 0);
+        await navigateToPath(path);
+      }
+    }
+
+    async function loadThisPC() {
+      state.isThisPC = true;
+      state.currentFolder = "";
+      document.getElementById('address-bar').value = "This PC";
+      updatePinButtonState();
+
+      const imgEl = document.getElementById('main-image');
+      const emptyState = document.getElementById('empty-state');
+      const thisPcContainer = document.getElementById('this-pc-container');
+
+      imgEl.style.display = 'none';
+      emptyState.style.display = 'none';
+      thisPcContainer.classList.remove('hidden');
+
+      await fetchDrives();
+      renderThisPCDashboard();
+      renderPinnedFolders();
+    }
+
+    function renderThisPCDashboard() {
+      const grid = document.getElementById('drives-grid');
+      if (!grid) return;
+
+      const drives = state.drives || [];
+      if (drives.length === 0) {
+        grid.innerHTML = `<div class="text-xs text-zinc-500 italic col-span-full">Tidak ada drive terdeteksi.</div>`;
+        return;
+      }
+
+      grid.innerHTML = drives.map(d => {
+        const isRemovable = d.type === 'removable';
+        const isMTP = d.type === 'mtp';
+        const iconName = isMTP ? 'smartphone' : (isRemovable ? 'usb' : 'hard-drive');
+        const badgeText = isMTP ? 'Ponsel / MTP Device' : (isRemovable ? 'Penyimpanan Eksternal / USB' : 'Local Disk');
+        const badgeClass = isMTP ? 'bg-purple-950/80 text-purple-400 border-purple-900/60' : (isRemovable ? 'bg-amber-950/80 text-amber-400 border-amber-900/60' : 'bg-blue-950/80 text-blue-400 border-blue-900/60');
+        const safePath = d.path.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+        return `
+          <div onclick="loadDrive('${safePath}')" class="p-4 bg-zinc-900 border border-brand-border rounded-xl hover:border-brand-blue cursor-pointer transition flex flex-col justify-between gap-3 group relative overflow-hidden">
+            <div class="flex items-start justify-between">
+              <div class="p-2.5 rounded-xl bg-zinc-950 border border-brand-border text-brand-blue group-hover:scale-105 transition">
+                <i data-lucide="${iconName}" class="w-6 h-6"></i>
+              </div>
+              <span class="text-[9px] font-semibold px-2 py-0.5 rounded-full border ${badgeClass}">
+                ${badgeText}
+              </span>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white group-hover:text-brand-blue transition truncate">${d.name}</h3>
+              <p class="text-[10px] text-zinc-500 font-mono mt-0.5">${d.path}</p>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    // Hierarchical recursive folder tree builder
+    async function renderSubdirs(parentPath, container, depth = 0) {
+      try {
+        const res = await fetch(`/api/scan-dir?path=${encodeURIComponent(parentPath)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        data.forEach(item => {
+          const itemEl = document.createElement('div');
+          itemEl.className = "flex flex-col select-none";
+
+          const rowEl = document.createElement('div');
+          rowEl.className = `flex items-center gap-1.5 py-1 px-2 hover:bg-zinc-800 rounded cursor-pointer group transition text-xs`;
+          rowEl.style.paddingLeft = `${depth * 14 + 8}px`;
+
+          let expanded = false;
+          let loaded = false;
+
+          const childrenContainer = document.createElement('div');
+          childrenContainer.className = "hidden flex flex-col";
+
+          // Chevron button wrapper
+          const chevronBtn = document.createElement('button');
+          chevronBtn.className = "w-4 h-4 text-zinc-500 hover:text-white transition-transform duration-150 flex items-center justify-center focus:outline-none";
+
+          const chevron = document.createElement('i');
+          chevron.className = "w-3 h-3";
+          if (item.hasChildren) {
+            chevron.setAttribute('data-lucide', 'chevron-right');
+            chevronBtn.onclick = async (e) => {
+              e.stopPropagation();
+              expanded = !expanded;
+              if (expanded) {
+                chevronBtn.style.transform = 'rotate(90deg)';
+                childrenContainer.classList.remove('hidden');
+                if (!loaded) {
+                  await renderSubdirs(item.path, childrenContainer, depth + 1);
+                  loaded = true;
+                }
+              } else {
+                chevronBtn.style.transform = 'rotate(0deg)';
+                childrenContainer.classList.add('hidden');
+              }
+            };
+          } else {
+            chevronBtn.style.width = '16px'; // Spacer
+          }
+          chevronBtn.appendChild(chevron);
+
+          const folderIcon = document.createElement('i');
+          folderIcon.className = "w-4 h-4 text-brand-blue shrink-0";
+          folderIcon.setAttribute('data-lucide', 'folder');
+
+          const nameSpan = document.createElement('span');
+          nameSpan.className = "truncate flex-1 text-zinc-300 group-hover:text-white";
+          nameSpan.innerText = item.name;
+
+          rowEl.appendChild(chevronBtn);
+          rowEl.appendChild(folderIcon);
+          rowEl.appendChild(nameSpan);
+
+          rowEl.onclick = async () => {
+            await navigateToPath(item.path);
+          };
+
+          itemEl.appendChild(rowEl);
+          itemEl.appendChild(childrenContainer);
+          container.appendChild(itemEl);
+        });
+        lucide.createIcons();
+      } catch (e) {
+        console.error("Gagal memuat subfolder", e);
+      }
+    }
+
+    async function navigateToAddress() {
+      const input = document.getElementById('address-bar');
+      const rawPath = cleanPath(input.value);
+      if (!rawPath || rawPath.toLowerCase() === 'this pc' || rawPath.toLowerCase() === 'thispc' || rawPath.toLowerCase() === 'computer') {
+        loadThisPC();
+        return;
+      }
+      input.value = rawPath;
+      await navigateToPath(rawPath);
+    }
+
+    async function navigateToPath(path) {
+      const cleaned = cleanPath(path);
+      if (!cleaned) return;
+
+      if (state.currentFolder && state.currentFolder !== cleaned) {
+        state.folderHistory.push(state.currentFolder);
+      }
+      state.isThisPC = false;
+      state.currentFolder = cleaned;
+      document.getElementById('address-bar').value = cleaned;
+
+      const thisPcContainer = document.getElementById('this-pc-container');
+      if (thisPcContainer) thisPcContainer.classList.add('hidden');
+
+      updatePinButtonState();
+      await fetchImages(cleaned);
+    }
+
+    async function fetchImages(path) {
+      try {
+        const res = await fetch(`/api/scan-images?path=${encodeURIComponent(path)}`);
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || "Folder tidak dapat diakses");
+        }
+        const data = await res.json();
+
+        state.images = data.images;
+        state.currentIndex = data.lastIndex !== undefined && data.lastIndex >= 0 && data.lastIndex < data.images.length ? data.lastIndex : (data.images.length > 0 ? 0 : -1);
+
+        logMsg(t('log_scan_dir', { path: path, count: state.images.length }));
+        const imgWord = (state.lang === 'id' || state.lang === 'jv' || state.lang === 'jv-tg') ? 'gambar' : state.lang === 'zh' ? '图片' : state.lang === 'ja' ? '枚' : state.lang === 'pt' ? 'imagens' : 'images';
+        document.getElementById('session-status').innerText = `Folder: ${path} (${state.images.length} ${imgWord})`;
+
+        displayCurrentImage();
+      } catch (e) {
+        logMsg(`Gagal memuat folder '${path}': ${e.message}`, 'error');
+        showCustomDialog({
+          title: 'Alamat Path Tidak Ditemukan',
+          message: `Direktori "${path}" tidak dapat ditemukan atau tidak dapat diakses. Silakan periksa kembali alamat direktori Anda.`,
+          type: 'alert'
+        });
+      }
+    }
+
+    // Display active image and draw filmstrip previews + 3-photo stage neighbors
+    async function displayCurrentImage() {
+      const imgEl = document.getElementById('main-image');
+      const emptyState = document.getElementById('empty-state');
+      const counter = document.getElementById('image-counter');
+
+      updateSessionIndex();
+
+      if (state.currentIndex >= 0 && state.currentIndex < state.images.length) {
+        const filename = state.images[state.currentIndex];
+        const path = `${state.currentFolder}/${filename}`;
+        const newSrc = `/api/image?path=${encodeURIComponent(path)}`;
+
+        // Show skeleton while loading
+        imgEl.style.opacity = '0';
+        imgEl.style.display = 'block';
+        emptyState.style.display = 'none';
+        counter.innerText = `${state.currentIndex + 1} / ${state.images.length}`;
+
+        // Load image, fade in on complete
+        const loader = new window.Image();
+        loader.onload = () => {
+          imgEl.src = newSrc;
+          imgEl.style.transition = 'opacity 0.18s ease';
+          imgEl.style.opacity = '1';
+        };
+        loader.onerror = () => {
+          imgEl.src = newSrc; // try anyway
+          imgEl.style.opacity = '1';
+        };
+        loader.src = newSrc;
+
+        // Preload neighbors for instant next/prev navigation
+        requestIdleCallback(() => preloadNeighbors(state.currentIndex), { timeout: 800 });
+
+        // Fetch metadata asynchronously without blocking image display
+        fetchMetadata(path);
+      } else {
+        imgEl.src = '';
+        imgEl.style.display = 'none';
+        imgEl.style.opacity = '1';
+        if (!state.isThisPC) {
+          emptyState.style.display = 'flex';
+        }
+        counter.innerText = '0 / 0';
+        clearMetadata();
+      }
+
+      renderStageNeighbors();
+      renderImagePreviews();
+    }
+
+    function renderStageNeighbors() {
+      const cardPrev = document.getElementById('stage-card-prev');
+      const cardNext = document.getElementById('stage-card-next');
+      const imgPrev = document.getElementById('stage-prev-img');
+      const imgNext = document.getElementById('stage-next-img');
+      const lblPrev = document.getElementById('stage-prev-label');
+      const lblNext = document.getElementById('stage-next-label');
+
+      if (!cardPrev || !cardNext) return;
+
+      const isStageActive = state.layout && state.layout.show_stage !== false;
+      if (!isStageActive || state.images.length === 0) {
+        cardPrev.classList.add('hidden');
+        cardNext.classList.add('hidden');
+        return;
+      }
+
+      if (state.images.length === 1) {
+        imgPrev.src = '';
+        lblPrev.innerText = 'First Photo';
+        cardPrev.classList.add('opacity-20', 'pointer-events-none');
+        cardPrev.classList.remove('hidden');
+
+        imgNext.src = '';
+        lblNext.innerText = 'Last Photo';
+        cardNext.classList.add('opacity-20', 'pointer-events-none');
+        cardNext.classList.remove('hidden');
+        return;
+      }
+
+      // Continuous cyclic wrap-around preview so neighbor cards are NEVER empty/black
+      const total = state.images.length;
+      const prevIdx = (state.currentIndex - 1 + total) % total;
+      const nextIdx = (state.currentIndex + 1) % total;
+
+      // Previous image card
+      const prevFile = state.images[prevIdx];
+      if (prevFile) {
+        const prevPath = `${state.currentFolder}/${prevFile}`;
+        const newSrc = `/api/thumbnail?path=${encodeURIComponent(prevPath)}&size=320`;
+        if (imgPrev.src !== newSrc) {
+          imgPrev.style.opacity = '0';
+          imgPrev.onload = () => { imgPrev.style.opacity = '1'; };
+          imgPrev.onerror = () => { imgPrev.src = `/api/image?path=${encodeURIComponent(prevPath)}`; imgPrev.style.opacity = '1'; };
+          imgPrev.src = newSrc;
+        } else {
+          imgPrev.style.opacity = '1';
+        }
+        lblPrev.innerText = prevFile;
+        lblPrev.title = prevFile;
+        cardPrev.classList.remove('hidden', 'opacity-20', 'pointer-events-none');
+        cardPrev.classList.add('opacity-60');
+      }
+
+      // Next image card
+      const nextFile = state.images[nextIdx];
+      if (nextFile) {
+        const nextPath = `${state.currentFolder}/${nextFile}`;
+        const newSrc = `/api/thumbnail?path=${encodeURIComponent(nextPath)}&size=320`;
+        if (imgNext.src !== newSrc) {
+          imgNext.style.opacity = '0';
+          imgNext.onload = () => { imgNext.style.opacity = '1'; };
+          imgNext.onerror = () => { imgNext.src = `/api/image?path=${encodeURIComponent(nextPath)}`; imgNext.style.opacity = '1'; };
+          imgNext.src = newSrc;
+        } else {
+          imgNext.style.opacity = '1';
+        }
+        lblNext.innerText = nextFile;
+        lblNext.title = nextFile;
+        cardNext.classList.remove('hidden', 'opacity-20', 'pointer-events-none');
+        cardNext.classList.add('opacity-60');
+      }
+    }
+
+
+    // Renders thumbnail gallery auto-adapting to bottom filmstrip vs sidebar vertical grid
+    function renderImagePreviews() {
+      const container = document.getElementById('tab-previews');
+      if (!container) return;
+
+      document.getElementById('folder-item-count').innerText = `${state.images.length} items`;
+
+      if (state.images.length === 0) {
+        container.innerHTML = `<div class="text-zinc-600 text-xs italic w-full text-center p-4">${t('lbl_no_images_in_folder')}</div>`;
+        return;
+      }
+
+      // Detect if Console is docked in a sidebar (left or right) vs bottom dock
+      const consoleDock = state.layout?.docks?.console || 'bottom';
+      const isSidebar = consoleDock === 'left' || consoleDock === 'right';
+      const isHidden = container.classList.contains('hidden');
+
+      if (isSidebar) {
+        container.className = "absolute inset-0 overflow-y-auto p-2 grid grid-cols-2 gap-2 content-start min-h-0 select-none" + (isHidden ? ' hidden' : '');
+      } else {
+        container.className = "absolute inset-0 overflow-x-auto p-4 flex gap-4 items-center min-h-0 select-none" + (isHidden ? ' hidden' : '');
+      }
+
+      const presetsGrid = document.getElementById('presets-grid');
+      if (presetsGrid) {
+        if (isSidebar) {
+          presetsGrid.className = "grid grid-cols-1 gap-2 p-2";
+        } else {
+          presetsGrid.className = "grid grid-cols-2 md:grid-cols-4 gap-3 p-4";
+        }
+      }
+
+      const thSize = state.thumbnail_size || 'medium';
+      let thumbPx = 240; // request size from /api/thumbnail
+      let cardClass = isSidebar ? 'h-32 w-full' : 'h-36 w-28';
+      let textClass = 'text-[9px] mt-1.5';
+      if (!isSidebar) {
+        if (thSize === 'small') {
+          cardClass = 'h-24 w-20'; textClass = 'text-[8px] mt-1'; thumbPx = 160;
+        } else if (thSize === 'large') {
+          cardClass = 'h-44 w-36'; textClass = 'text-[10px] mt-2'; thumbPx = 320;
+        }
+      }
+
+      const observer = getThumbObserver();
+      const frag = document.createDocumentFragment();
+
+      state.images.forEach((filename, idx) => {
+        const path = `${state.currentFolder}/${filename}`;
+        const thumbUrl = `/api/thumbnail?path=${encodeURIComponent(path)}&size=${thumbPx}`;
+
+        const card = document.createElement('div');
+        const isActive = idx === state.currentIndex;
+        card.className = `${cardClass} shrink-0 rounded-lg border p-1.5 cursor-pointer flex flex-col justify-between transition group hover:scale-102 ${isActive ? 'bg-zinc-800 border-brand-blue' : 'bg-zinc-950 border-brand-border hover:border-zinc-700'
+          }`;
+        card.dataset.index = idx;
+
+        card.onclick = () => {
+          state.currentIndex = idx;
+          displayCurrentImage();
+        };
+
+        // Create a skeleton placeholder that shows before the image loads
+        const imgWrapper = document.createElement('div');
+        imgWrapper.className = 'w-full flex-1 overflow-hidden rounded bg-zinc-900 flex items-center justify-center relative min-h-0';
+
+        // Skeleton shimmer div (shown until image loads)
+        const skeleton = document.createElement('div');
+        skeleton.className = 'absolute inset-0 skeleton-shimmer';
+        imgWrapper.appendChild(skeleton);
+
+        const thumbImg = document.createElement('img');
+        thumbImg.className = 'max-w-full max-h-full object-cover relative z-10';
+        thumbImg.alt = filename;
+        thumbImg.style.opacity = '0';
+        thumbImg.style.transition = 'opacity 0.15s ease';
+
+        thumbImg.onload = () => {
+          thumbImg.style.opacity = '1';
+          skeleton.remove();
+        };
+        thumbImg.onerror = () => {
+          thumbImg.src = `/api/image?path=${encodeURIComponent(path)}`;
+          thumbImg.style.opacity = '1';
+          skeleton.remove();
+        };
+
+        if (Math.abs(idx - state.currentIndex) <= 4) {
+          thumbImg.src = thumbUrl;
+        } else {
+          thumbImg.dataset.src = thumbUrl;
+          observer.observe(thumbImg);
+        }
+
+        imgWrapper.appendChild(thumbImg);
+
+        const titleLabel = document.createElement('div');
+        titleLabel.className = `truncate text-zinc-400 group-hover:text-white font-mono ${textClass}`;
+        titleLabel.innerText = filename;
+        titleLabel.title = filename;
+
+        card.appendChild(imgWrapper);
+        card.appendChild(titleLabel);
+        frag.appendChild(card);
+      });
+
+      container.innerHTML = '';
+      container.appendChild(frag);
+
+      const activeCard = container.querySelector(`[data-index="${state.currentIndex}"]`);
+      if (activeCard) {
+        requestAnimationFrame(() => {
+          activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        });
+      }
+    }
+
+
+    async function fetchMetadata(path) {
+      try {
+        const res = await fetch(`/api/metadata?path=${encodeURIComponent(path)}`);
+        const data = await res.json();
+
+        document.getElementById('meta-camera').innerText = data.exif.Camera;
+        document.getElementById('meta-iso').innerText = data.exif.ISO;
+        document.getElementById('meta-aperture').innerText = data.exif.Aperture;
+        document.getElementById('meta-shutter').innerText = data.exif.Shutter;
+
+        document.getElementById('meta-filename').innerText = data.filename;
+        document.getElementById('meta-filename').title = data.filename;
+        document.getElementById('meta-resolution').innerText = data.resolution;
+        document.getElementById('meta-size').innerText = data.size;
+
+        drawHistogram(data.histogram);
+      } catch (e) {
+        console.error("Gagal memuat metadata", e);
+      }
+    }
+
+    function clearMetadata() {
+      document.getElementById('meta-camera').innerText = '-';
+      document.getElementById('meta-iso').innerText = '-';
+      document.getElementById('meta-aperture').innerText = '-';
+      document.getElementById('meta-shutter').innerText = '-';
+      document.getElementById('meta-filename').innerText = '-';
+      document.getElementById('meta-resolution').innerText = '-';
+      document.getElementById('meta-size').innerText = '-';
+
+      const canvas = document.getElementById('histogram-canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawHistogram(hist) {
+      const canvas = document.getElementById('histogram-canvas');
+      const ctx = canvas.getContext('2d');
+
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.globalCompositeOperation = 'screen';
+
+      const maxVal = Math.max(...hist.r, ...hist.g, ...hist.b);
+      if (maxVal === 0) return;
+
+      const scaleX = canvas.width / 256;
+      const scaleY = canvas.height / maxVal;
+
+      const drawChannel = (data, color) => {
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 256; i++) {
+          const x = i * scaleX;
+          const y = canvas.height - (data[i] * scaleY);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      };
+
+      drawChannel(hist.r, '#ef4444');
+      drawChannel(hist.g, '#10b981');
+      drawChannel(hist.b, '#3b82f6');
+    }
+
+    // Navigation and folder actions
+    function nextImage() {
+      if (state.images.length > 0 && state.currentIndex < state.images.length - 1) {
+        state.currentIndex++;
+        displayCurrentImage();
+      }
+    }
+
+    function prevImage() {
+      if (state.images.length > 0 && state.currentIndex > 0) {
+        state.currentIndex--;
+        displayCurrentImage();
+      }
+    }
+
+    // History and navigation back/up
+    function goBack() {
+      if (state.folderHistory.length > 0) {
+        const prev = state.folderHistory.pop();
+        navigateToPath(prev);
+      }
+    }
+
+    function goUp() {
+      if (state.currentFolder) {
+        const parts = state.currentFolder.split(/[\\/]/);
+        if (parts.length > 1) {
+          parts.pop();
+          const parent = parts.join('/');
+          navigateToPath(parent);
+        }
+      }
+    }
+
+    function refreshFolder() {
+      if (state.currentFolder) {
+        fetchImages(state.currentFolder);
+      }
+    }
+
+    function navigateToAddress() {
+      const path = document.getElementById('address-bar').value.trim();
+      if (path) navigateToPath(path);
+    }
+
+    // Action executing Moves / Copy / Trash
+    async function executeAction(action, targetFolder = null) {
+      if (state.currentIndex < 0 || state.currentIndex >= state.images.length) return;
+      const filename = state.images[state.currentIndex];
+
+      const payload = {
+        action: action,
+        src_folder: state.currentFolder,
+        file_name: filename,
+        target_folder: targetFolder,
+        resolve_conflict: 'keep_both'
+      };
+
+      try {
+        const res = await fetch('/api/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+          logMsg(t('log_action_ok', { action: action.toUpperCase(), file: filename, target: targetFolder || 'Recycle Bin' }), 'success');
+
+          const proceed = () => {
+            state.images.splice(state.currentIndex, 1);
+            if (state.currentIndex >= state.images.length) {
+              state.currentIndex = Math.max(0, state.images.length - 1);
+            }
+            displayCurrentImage();
+          };
+
+          if (state.animations !== false) {
+            const imgEl = document.getElementById('main-image');
+            const animClass = action === 'delete' ? 'animate-delete-out' : 'animate-move-out';
+            imgEl.classList.add(animClass);
+
+            setTimeout(() => {
+              proceed();
+              imgEl.classList.remove(animClass);
+              imgEl.classList.add('animate-image-in');
+              setTimeout(() => imgEl.classList.remove('animate-image-in'), 200);
+            }, 220);
+          } else {
+            proceed();
+          }
+        } else {
+          logMsg(t('log_action_err', { err: data.detail }), 'error');
+        }
+      } catch (e) {
+        logMsg(t('log_action_err', { err: e }), 'error');
+      }
+    }
+
+    async function deleteImage() {
+      if (state.currentIndex < 0) return;
+      const filename = state.images[state.currentIndex];
+
+      if (!state.ask_delete) {
+        await executeAction('delete');
+        return;
+      }
+
+      showCustomDialog({
+        title: t('dlg_confirm_del_title'),
+        message: t('dlg_confirm_del_msg', { file: filename }),
+        type: 'confirm',
+        onOk: async () => {
+          await executeAction('delete');
+        }
+      });
+    }
+
+    async function undoAction() {
+      try {
+        const res = await fetch('/api/undo', { method: 'POST' });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+          logMsg(t('log_undo_ok', { msg: data.message }), 'undo');
+          refreshFolder();
+        } else {
+          logMsg(t('log_undo_err', { err: data.message || "" }), 'error');
+        }
+      } catch (e) {
+        logMsg(t('log_undo_err', { err: e }), 'error');
+      }
+    }
+
+    async function createNewFolder() {
+      if (!state.currentFolder) return;
+      showCustomDialog({
+        title: t('dlg_create_folder_title'),
+        message: t('dlg_create_folder_msg'),
+        type: 'prompt',
+        placeholder: t('lbl_new_folder') + '...',
+        onOk: async (name) => {
+          if (!name) return;
+          try {
+            const res = await fetch('/api/create-folder', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ parent_folder: state.currentFolder, folder_name: name })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+              logMsg(t('log_create_folder_ok', { name }));
+              await loadDrive(document.getElementById('drive-selector').value);
+            }
+          } catch (e) {
+            logMsg(t('log_create_folder_err', { err: e }), 'error');
+          }
+        }
+      });
+    }
+
+    async function rotateImage(degrees) {
+      if (state.currentIndex < 0) return;
+      const filename = state.images[state.currentIndex];
+      const path = `${state.currentFolder}/${filename}`;
+
+      try {
+        const res = await fetch(`/api/rotate?path=${encodeURIComponent(path)}&degrees=${degrees}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'success') {
+          logMsg(t('log_rotate_ok', { degrees, file: filename }));
+          const imgEl = document.getElementById('main-image');
+          imgEl.src = `/api/image?path=${encodeURIComponent(path)}&t=${Date.now()}`;
+        }
+      } catch (e) {
+        logMsg(t('log_rotate_err', { err: e }), 'error');
+      }
+    }
+    // Global actions keys for recorder UI
+    const GLOBAL_ACTION_KEYS = [
+      'next_image', 'prev_image', 'undo', 'delete',
+      'rotate_cw', 'rotate_ccw', 'help', 'toggle_explorer',
+      'toggle_console', 'toggle_metadata', 'create_folder', 'open_folder'
+    ];
+
+    // Visual settings loader
+    async function fetchSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        const data = await res.json();
+        state.hotkeys = data.hotkeys;
+        state.extensions = data.extensions;
+        state.ask_delete = data.ask_delete !== undefined ? data.ask_delete : true;
+        state.theme = data.theme || 'theme-black';
+        state.thumbnail_size = data.thumbnail_size || 'medium';
+        state.animations = data.animations !== undefined ? data.animations : true;
+        state.global_shortcuts = data.global_shortcuts || {};
+        state.lang = data.lang || 'en';
+        state.custom_hotkeys = data.custom_hotkeys || [];
+        state.disabled_global_shortcuts = data.disabled_global_shortcuts || [];
+        state.disabled_preset_keys = data.disabled_preset_keys || [];
+
+        document.body.className = 'h-full flex flex-col antialiased ' + state.theme;
+        applyLanguage(state.lang);
+        renderPresetsPanel();
+        renderImagePreviews();
+      } catch (e) {
+        console.error('Gagal memuat setting', e);
+      }
+    }
+
+    function renderPresetsPanel() {
+      const grid = document.getElementById('presets-grid');
+      grid.innerHTML = '';
+
+      for (let i = 1; i <= 9; i++) {
+        const key = String(i);
+        const conf = state.hotkeys[key];
+
+        const card = document.createElement('button');
+        card.className = "p-3 rounded-xl border border-brand-border bg-zinc-950 hover:border-brand-blue flex flex-col items-start gap-1 text-left transition select-none group";
+
+        if (conf) {
+          const actionText = conf.action.toUpperCase();
+          const targetName = conf.target.split(/[\\/]/).pop() || conf.target;
+          card.onclick = () => executeAction(conf.action, conf.target);
+          card.innerHTML = `
+            <span class="text-[10px] font-semibold text-brand-accent bg-zinc-900 px-2 py-0.5 rounded font-mono uppercase">Preset ${key}</span>
+            <span class="text-xs font-semibold text-white truncate w-full mt-1">${targetName}</span>
+            <span class="text-[9px] text-zinc-500 font-mono">${actionText}</span>
+          `;
+        } else {
+          card.onclick = openSettingsModal;
+          card.innerHTML = `
+            <span class="text-[10px] font-semibold text-zinc-600 bg-zinc-900 px-2 py-0.5 rounded font-mono uppercase">Preset ${key}</span>
+            <span class="text-xs text-zinc-600 italic mt-1">Kosong</span>
+            <span class="text-[9px] text-zinc-600">Klik untuk atur</span>
+          `;
+        }
+        grid.appendChild(card);
+      }
+    }
+
+    // Modal Control: Settings Tab Swapping
+    function setSettingsTab(tab) {
+      const btnHotkeys = document.getElementById('set-tab-btn-hotkeys');
+      const btnCustomKeys = document.getElementById('set-tab-btn-custom-keys');
+      const btnGlobalShortcuts = document.getElementById('set-tab-btn-global-shortcuts');
+      const btnAppearance = document.getElementById('set-tab-btn-appearance');
+      const btnSystem = document.getElementById('set-tab-btn-system');
+
+      const contentHotkeys = document.getElementById('set-tab-content-hotkeys');
+      const contentCustomKeys = document.getElementById('set-tab-content-custom-keys');
+      const contentGlobalShortcuts = document.getElementById('set-tab-content-global-shortcuts');
+      const contentAppearance = document.getElementById('set-tab-content-appearance');
+      const contentSystem = document.getElementById('set-tab-content-system');
+
+      // Reset classes
+      [btnHotkeys, btnCustomKeys, btnGlobalShortcuts, btnAppearance, btnSystem].forEach(b => {
+        if (b) b.className = 'text-xs py-2.5 border-b-2 border-transparent font-medium text-zinc-400 hover:text-white transition flex items-center gap-1.5 focus:outline-none shrink-0';
+      });
+      [contentHotkeys, contentCustomKeys, contentGlobalShortcuts, contentAppearance, contentSystem].forEach(c => {
+        if (c) c.classList.add('hidden');
+      });
+
+      const activeClass = 'text-xs py-2.5 border-b-2 border-brand-blue font-medium text-white transition flex items-center gap-1.5 focus:outline-none shrink-0';
+      if (tab === 'hotkeys') {
+        btnHotkeys.className = activeClass;
+        contentHotkeys.classList.remove('hidden');
+      } else if (tab === 'custom-keys') {
+        btnCustomKeys.className = activeClass;
+        contentCustomKeys.classList.remove('hidden');
+        renderCustomHotkeyRows();
+      } else if (tab === 'global-shortcuts') {
+        btnGlobalShortcuts.className = activeClass;
+        contentGlobalShortcuts.classList.remove('hidden');
+      } else if (tab === 'appearance') {
+        btnAppearance.className = activeClass;
+        contentAppearance.classList.remove('hidden');
+      } else if (tab === 'system') {
+        btnSystem.className = activeClass;
+        contentSystem.classList.remove('hidden');
+      }
+      lucide.createIcons();
+    }
+
+
+    // Modal Control: Settings
+    function openSettingsModal() {
+      // 1. Preset Hotkeys (1-9) with toggle + conflict badge
+      const container = document.getElementById('settings-hotkeys-rows');
+      container.innerHTML = '';
+      for (let i = 1; i <= 9; i++) {
+        const key = String(i);
+        const conf = state.hotkeys[key] || { action: 'move', target: '', enabled: true };
+        const isEnabled = !(state.disabled_preset_keys || []).includes(key);
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'space-y-1';
+
+        const row = document.createElement('div');
+        row.id = `preset-row-${key}`;
+        row.className = `flex items-center gap-3 bg-zinc-950 p-3 rounded-lg border border-brand-border transition ${isEnabled ? '' : 'shortcut-row-disabled'}`;
+        row.innerHTML = `
+          <label class="toggle-sw" title="${isEnabled ? 'Aktif — klik untuk nonaktifkan' : 'Nonaktif — klik untuk aktifkan'}">
+            <input type="checkbox" id="toggle-preset-${key}" ${isEnabled ? 'checked' : ''}>
+            <span class="slider"></span>
+          </label>
+          <span class="key-badge w-8 h-8 rounded-md bg-zinc-900 border border-brand-border flex items-center justify-center font-bold text-brand-blue text-sm font-mono">${key}</span>
+          <select id="set-action-${key}" class="bg-zinc-900 border border-brand-border rounded px-2 py-1 text-xs text-white outline-none" ${!isEnabled ? 'disabled' : ''}>
+            <option value="move" ${conf.action === 'move' ? 'selected' : ''}>MOVE (${t('lbl_move')})</option>
+            <option value="copy" ${conf.action === 'copy' ? 'selected' : ''}>COPY (${t('lbl_copy')})</option>
+          </select>
+          <input type="text" id="set-target-${key}" value="${conf.target}" placeholder="${t('lbl_target_placeholder')}" class="flex-1 bg-zinc-900 border border-brand-border rounded px-3 py-1 text-xs text-zinc-300 font-mono outline-none" ${!isEnabled ? 'disabled' : ''}>
+          <button onclick="browsePresetFolder('${key}')" class="px-3 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-xs text-white" ${!isEnabled ? 'disabled' : ''}>${t('lbl_browse')}</button>
+        `;
+
+        // Conflict badge container for this row
+        const conflictEl = document.createElement('div');
+        conflictEl.id = `conflict-preset-${key}`;
+
+        // Toggle change handler
+        const toggleInput = row.querySelector(`#toggle-preset-${key}`);
+        toggleInput.onchange = () => {
+          const enabled = toggleInput.checked;
+          row.classList.toggle('shortcut-row-disabled', !enabled);
+          row.querySelectorAll('select, input[type=text], button').forEach(el => el.disabled = !enabled);
+          refreshConflictSummary();
+          updatePresetConflictBadge(key, conflictEl);
+        };
+
+        // Update conflict badge for this preset row
+        const updatePresetConflictBadge = (k, el) => {
+          const targetEl = document.getElementById(`set-target-${k}`);
+          if (targetEl && targetEl.value.trim()) {
+            const c = getConflictsForKey(k, `preset_${k}`);
+            el.innerHTML = renderConflictBadgesHtml(c, `Preset [${k}]`);
+          } else {
+            el.innerHTML = '';
+          }
+        };
+
+        // Trigger conflict check when target changes
+        const targetInput = row.querySelector(`#set-target-${key}`);
+        targetInput.oninput = () => { updatePresetConflictBadge(key, conflictEl); refreshConflictSummary(); };
+
+        wrapper.appendChild(row);
+        wrapper.appendChild(conflictEl);
+        container.appendChild(wrapper);
+
+        // Initial conflict check
+        setTimeout(() => updatePresetConflictBadge(key, conflictEl), 0);
+      }
+
+      // 2. Global Shortcuts with toggle + conflict badge
+      const shContainer = document.getElementById('settings-global-shortcuts-rows');
+      shContainer.innerHTML = '';
+      GLOBAL_ACTION_KEYS.forEach(actionName => {
+        const shortcutStr = state.global_shortcuts[actionName] || 'None';
+        const isEnabled = !(state.disabled_global_shortcuts || []).includes(actionName);
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'space-y-1';
+
+        const row = document.createElement('div');
+        row.className = `flex items-center justify-between bg-zinc-950 p-2.5 rounded-lg border border-brand-border text-xs transition ${isEnabled ? '' : 'shortcut-row-disabled'}`;
+
+        row.innerHTML = `
+          <div class="flex items-center gap-2.5">
+            <label class="toggle-sw" title="Toggle aktif/nonaktif shortcut ini">
+              <input type="checkbox" id="toggle-global-${actionName}" ${isEnabled ? 'checked' : ''}>
+              <span class="slider"></span>
+            </label>
+            <div class="flex flex-col">
+              <span class="font-semibold text-zinc-300">${t('sh_' + actionName)}</span>
+              <span class="text-[10px] text-zinc-500">${t('sh_' + actionName + '_desc')}</span>
+            </div>
+          </div>
+          <input type="text" id="sh-${actionName}" value="${shortcutStr}" readonly
+            class="key-badge w-36 bg-zinc-900 border border-brand-border rounded text-center py-1 text-xs text-brand-blue font-bold font-mono outline-none cursor-pointer focus:border-brand-blue hover:bg-zinc-800 transition"
+            placeholder="${t('lbl_press_key')}" ${!isEnabled ? 'disabled' : ''}>
+        `;
+
+        const conflictEl = document.createElement('div');
+        conflictEl.id = `conflict-global-${actionName}`;
+
+        const inputEl = row.querySelector(`#sh-${actionName}`);
+        inputEl.onkeydown = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (e.key === 'Backspace' || e.key === 'Delete') {
+            inputEl.value = 'None';
+          } else {
+            const str = keyEventToString(e);
+            if (str) inputEl.value = str;
+          }
+          updateGlobalConflictBadge(actionName, conflictEl);
+          refreshConflictSummary();
+        };
+
+        const toggleInput = row.querySelector(`#toggle-global-${actionName}`);
+        toggleInput.onchange = () => {
+          const enabled = toggleInput.checked;
+          row.classList.toggle('shortcut-row-disabled', !enabled);
+          inputEl.disabled = !enabled;
+          refreshConflictSummary();
+          updateGlobalConflictBadge(actionName, conflictEl);
+        };
+
+        wrapper.appendChild(row);
+        wrapper.appendChild(conflictEl);
+        shContainer.appendChild(wrapper);
+      });
+
+      // Helper: update conflict badge for a global shortcut
+      const updateGlobalConflictBadge = (actionName, el) => {
+        const inputEl = document.getElementById(`sh-${actionName}`);
+        if (!inputEl || !inputEl.value || inputEl.value === 'None') { el.innerHTML = ''; return; }
+        const c = getConflictsForKey(inputEl.value, `global_${actionName}`);
+        el.innerHTML = renderConflictBadgesHtml(c, `Global: ${t('sh_' + actionName) || actionName}`);
+      };
+
+      // Initial conflict badges for global shortcuts
+      GLOBAL_ACTION_KEYS.forEach(actionName => {
+        const el = document.getElementById(`conflict-global-${actionName}`);
+        if (el) setTimeout(() => updateGlobalConflictBadge(actionName, el), 0);
+      });
+
+      // 3. Appearance settings
+      const themeRadios = document.getElementsByName('opt-theme');
+      themeRadios.forEach(r => {
+        if (r.value === state.theme) r.checked = true;
+      });
+      const thSizeRadios = document.getElementsByName('opt-th-size');
+      thSizeRadios.forEach(r => {
+        if (r.value === state.thumbnail_size) r.checked = true;
+      });
+      document.getElementById('chk-animations').checked = state.animations !== false;
+
+      // 4. System settings
+      document.getElementById('chk-ask-delete').checked = state.ask_delete;
+      document.getElementById('opt-lang').value = state.lang || 'en';
+      document.getElementById('ext-jpg').checked = state.extensions.includes('.jpg');
+      document.getElementById('ext-png').checked = state.extensions.includes('.png');
+      document.getElementById('ext-webp').checked = state.extensions.includes('.webp');
+      document.getElementById('ext-gif').checked = state.extensions.includes('.gif');
+
+      // 5. Load custom hotkeys into working copy
+      _customHotkeysEdit = JSON.parse(JSON.stringify(state.custom_hotkeys || []));
+
+      // Default to hotkeys tab on open + refresh conflict summary
+      setSettingsTab('hotkeys');
+      document.getElementById('settings-modal').classList.remove('hidden');
+      setTimeout(refreshConflictSummary, 50);
+    }
+
+
+
+    async function browsePresetFolder(key) {
+      const current = document.getElementById(`set-target-${key}`).value;
+      showCustomDialog({
+        title: t('dlg_preset_title', { key }),
+        message: t('dlg_preset_msg'),
+        type: 'prompt',
+        defaultValue: current,
+        placeholder: 'Example: D:\\Photos\\Sports\\Output',
+        onOk: (path) => {
+          if (path) {
+            document.getElementById(`set-target-${key}`).value = path;
+          }
+        }
+      });
+    }
+
+    // ============================================================
+    // CUSTOM HOTKEYS — state, UI, logic
+    // ============================================================
+
+    // In-memory working copy while settings modal is open
+    let _customHotkeysEdit = [];
+
+    function renderCustomHotkeyRows() {
+      const container = document.getElementById('custom-hotkeys-rows');
+      const emptyEl  = document.getElementById('custom-hotkeys-empty');
+      container.innerHTML = '';
+
+      if (_customHotkeysEdit.length === 0) {
+        emptyEl.classList.remove('hidden');
+        lucide.createIcons();
+        refreshConflictSummary();
+        return;
+      }
+      emptyEl.classList.add('hidden');
+
+      _customHotkeysEdit.forEach((item, idx) => {
+        // ---- Enable/Disable toggle ----
+        const isEnabled = item.enabled !== false;
+        const toggleLabel = document.createElement('label');
+        toggleLabel.className = 'toggle-sw shrink-0';
+        toggleLabel.title = isEnabled ? 'Aktif — klik untuk nonaktifkan' : 'Nonaktif — klik untuk aktifkan';
+        const toggleChk = document.createElement('input');
+        toggleChk.type = 'checkbox';
+        toggleChk.checked = isEnabled;
+        const toggleSlider = document.createElement('span');
+        toggleSlider.className = 'slider';
+        toggleLabel.appendChild(toggleChk);
+        toggleLabel.appendChild(toggleSlider);
+
+        const row = document.createElement('div');
+        row.className = `flex items-center gap-2 bg-zinc-950 p-2.5 rounded-xl border border-brand-border group hover:border-zinc-700 transition ${isEnabled ? '' : 'shortcut-row-disabled'}`;
+        row.dataset.idx = idx;
+
+        // ---- Key recorder button ----
+        const keyBtn = document.createElement('div');
+        keyBtn.className = 'key-badge min-w-[80px] px-2 py-1.5 rounded-lg border border-brand-border bg-zinc-900 text-center text-xs font-bold font-mono text-brand-blue cursor-pointer hover:border-brand-blue transition focus:outline-none select-none';
+        keyBtn.tabIndex = 0;
+        keyBtn.title = 'Klik lalu tekan tombol keyboard';
+        keyBtn.textContent = item.key || 'Klik...';
+
+        // Conflict badge container (lives below the row)
+        const conflictDiv = document.createElement('div');
+        conflictDiv.className = 'pl-2';
+        const updateCustomConflictBadge = () => {
+          if (!item.key) { conflictDiv.innerHTML = ''; return; }
+          const c = getConflictsForKey(item.key, `custom_${idx}`);
+          conflictDiv.innerHTML = renderConflictBadgesHtml(c, `Custom [${item.key}]`);
+        };
+
+        toggleChk.onchange = () => {
+          item.enabled = toggleChk.checked;
+          row.classList.toggle('shortcut-row-disabled', !item.enabled);
+          refreshConflictSummary();
+          updateCustomConflictBadge();
+        };
+
+        let _isRecording = false;
+        const startRecord = () => {
+          if (_isRecording) return;
+          _isRecording = true;
+          keyBtn.textContent = '⏺ Tekan...';
+          keyBtn.classList.add('border-brand-blue', 'text-white');
+          const onKey = (e) => {
+            e.preventDefault(); e.stopPropagation();
+            if (e.key === 'Escape') {
+              keyBtn.textContent = item.key || 'Klik...';
+            } else {
+              const str = keyEventToString(e);
+              if (str) { item.key = str; keyBtn.textContent = str; }
+            }
+            _isRecording = false;
+            keyBtn.classList.remove('text-white');
+            document.removeEventListener('keydown', onKey, true);
+          };
+          document.addEventListener('keydown', onKey, true);
+        };
+        keyBtn.addEventListener('click', startRecord);
+        keyBtn.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startRecord(); } });
+
+        // ---- Label input ----
+        const labelIn = document.createElement('input');
+        labelIn.type = 'text';
+        labelIn.className = 'w-24 bg-zinc-900 border border-brand-border rounded-lg px-2 py-1.5 text-xs text-zinc-300 font-mono outline-none focus:border-brand-blue';
+        labelIn.placeholder = 'Label...';
+        labelIn.value = item.label || '';
+        labelIn.oninput = () => { item.label = labelIn.value; };
+
+        // ---- Action dropdown ----
+        const actionSel = document.createElement('select');
+        actionSel.className = 'bg-zinc-900 border border-brand-border rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-brand-blue cursor-pointer';
+        ['move', 'copy', 'delete'].forEach(act => {
+          const opt = document.createElement('option');
+          opt.value = act;
+          opt.textContent = act.toUpperCase();
+          if (item.action === act) opt.selected = true;
+          actionSel.appendChild(opt);
+        });
+        actionSel.onchange = () => {
+          item.action = actionSel.value;
+          // If delete, disable target input
+          targetIn.disabled = (item.action === 'delete');
+          browseBtn.disabled = (item.action === 'delete');
+          targetIn.style.opacity = (item.action === 'delete') ? '0.3' : '1';
+        };
+
+        // ---- Target folder input ----
+        const targetIn = document.createElement('input');
+        targetIn.type = 'text';
+        targetIn.className = 'flex-1 bg-zinc-900 border border-brand-border rounded-lg px-2 py-1.5 text-xs text-zinc-300 font-mono outline-none focus:border-brand-blue';
+        targetIn.placeholder = 'D:\\Folder\\Tujuan';
+        targetIn.value = item.target || '';
+        targetIn.disabled = (item.action === 'delete');
+        targetIn.style.opacity = (item.action === 'delete') ? '0.3' : '1';
+        targetIn.oninput = () => { item.target = targetIn.value; };
+
+        // ---- Browse button ----
+        const browseBtn = document.createElement('button');
+        browseBtn.className = 'px-2 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-white transition shrink-0';
+        browseBtn.textContent = 'Browse';
+        browseBtn.disabled = (item.action === 'delete');
+        browseBtn.onclick = () => {
+          showCustomDialog({
+            title: 'Folder Tujuan Custom Hotkey',
+            message: 'Tempel path absolut folder tujuan:',
+            type: 'prompt',
+            defaultValue: item.target || '',
+            placeholder: 'Contoh: D:\\Foto\\Terpilih',
+            onOk: (p) => { if (p) { item.target = p; targetIn.value = p; } }
+          });
+        };
+
+        // ---- Delete row button ----
+        const delBtn = document.createElement('button');
+        delBtn.className = 'p-1.5 rounded-lg hover:bg-red-950/60 text-zinc-600 hover:text-red-400 transition opacity-0 group-hover:opacity-100 shrink-0';
+        delBtn.title = 'Hapus hotkey ini';
+        delBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>';
+        delBtn.onclick = () => {
+          _customHotkeysEdit.splice(idx, 1);
+          renderCustomHotkeyRows();
+          refreshConflictSummary();
+        };
+
+        row.appendChild(toggleLabel);
+        row.appendChild(keyBtn);
+        row.appendChild(labelIn);
+        row.appendChild(actionSel);
+        row.appendChild(targetIn);
+        row.appendChild(browseBtn);
+        row.appendChild(delBtn);
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'space-y-0.5';
+        wrapper.appendChild(row);
+        wrapper.appendChild(conflictDiv);
+        container.appendChild(wrapper);
+
+        setTimeout(updateCustomConflictBadge, 0);
+      });
+
+      setTimeout(refreshConflictSummary, 20);
+    }
+
+
+    function addCustomHotkeyRow() {
+      _customHotkeysEdit.push({ key: '', label: '', action: 'move', target: '' });
+      renderCustomHotkeyRows();
+      // Scroll to new row
+      const cont = document.getElementById('custom-hotkeys-rows');
+      cont.scrollTop = cont.scrollHeight;
+    }
+
+
+    async function saveSettings() {
+      // 1. Hotkeys (1-9) + which preset keys are disabled
+      const newHotkeys = {};
+      const newDisabledPresetKeys = [];
+      for (let i = 1; i <= 9; i++) {
+        const key = String(i);
+        const actionEl = document.getElementById(`set-action-${key}`);
+        const targetEl = document.getElementById(`set-target-${key}`);
+        const toggleEl = document.getElementById(`toggle-preset-${key}`);
+        const action = actionEl ? actionEl.value : 'move';
+        const target = targetEl ? targetEl.value.trim() : '';
+        const enabled = toggleEl ? toggleEl.checked : true;
+        if (target) newHotkeys[key] = { action, target };
+        if (!enabled) newDisabledPresetKeys.push(key);
+      }
+
+      // 2. Global Shortcuts + which are disabled
+      const newGlobalShortcuts = {};
+      const newDisabledGlobalShortcuts = [];
+      GLOBAL_ACTION_KEYS.forEach(actionName => {
+        const val = document.getElementById(`sh-${actionName}`)?.value;
+        newGlobalShortcuts[actionName] = val === 'None' ? '' : (val || '');
+        const toggleEl = document.getElementById(`toggle-global-${actionName}`);
+        if (toggleEl && !toggleEl.checked) newDisabledGlobalShortcuts.push(actionName);
+      });
+
+      // 3. Theme & Thumbnail size
+      let newTheme = 'theme-black';
+      document.getElementsByName('opt-theme').forEach(r => { if (r.checked) newTheme = r.value; });
+      let newThSize = 'medium';
+      document.getElementsByName('opt-th-size').forEach(r => { if (r.checked) newThSize = r.value; });
+      const newAnims = document.getElementById('chk-animations').checked;
+
+      // 4. System Options
+      const newAskDelete = document.getElementById('chk-ask-delete').checked;
+      const newLang = document.getElementById('opt-lang').value;
+      const newExts = [];
+      if (document.getElementById('ext-jpg').checked) { newExts.push('.jpg'); newExts.push('.jpeg'); }
+      if (document.getElementById('ext-png').checked) newExts.push('.png');
+      if (document.getElementById('ext-webp').checked) newExts.push('.webp');
+      if (document.getElementById('ext-gif').checked) newExts.push('.gif');
+
+      // 5. Custom hotkeys (keep enabled flag)
+      const newCustomHotkeys = _customHotkeysEdit.filter(h => h.key);
+
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            hotkeys: newHotkeys,
+            extensions: newExts,
+            ask_delete: newAskDelete,
+            theme: newTheme,
+            thumbnail_size: newThSize,
+            animations: newAnims,
+            global_shortcuts: newGlobalShortcuts,
+            lang: newLang,
+            custom_hotkeys: newCustomHotkeys,
+            disabled_preset_keys: newDisabledPresetKeys,
+            disabled_global_shortcuts: newDisabledGlobalShortcuts
+          })
+        });
+        if (res.ok) {
+          state.hotkeys = newHotkeys;
+          state.extensions = newExts;
+          state.ask_delete = newAskDelete;
+          state.theme = newTheme;
+          state.thumbnail_size = newThSize;
+          state.animations = newAnims;
+          state.global_shortcuts = newGlobalShortcuts;
+          state.lang = newLang;
+          state.custom_hotkeys = newCustomHotkeys;
+          state.disabled_preset_keys = newDisabledPresetKeys;
+          state.disabled_global_shortcuts = newDisabledGlobalShortcuts;
+
+          applyLanguage(newLang);
+          document.body.className = 'h-full flex flex-col antialiased ' + state.theme;
+          logMsg(t('log_save_settings'));
+          renderPresetsPanel();
+          renderImagePreviews();
+          closeSettingsModal();
+        }
+      } catch (e) {
+        logMsg(t('log_action_err', { err: e }), 'error');
+      }
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settings-modal').classList.add('hidden');
+    }
+
+    // Modal Control: Help
+    function showHelpModal() {
+      document.getElementById('help-modal').classList.remove('hidden');
+    }
+
+    function closeHelpModal() {
+      document.getElementById('help-modal').classList.add('hidden');
+    }
+
+    function keyEventToString(e) {
+      const parts = [];
+      if (e.ctrlKey) parts.push('Ctrl');
+      if (e.shiftKey) parts.push('Shift');
+      if (e.altKey) parts.push('Alt');
+
+      let key = e.key;
+      if (key === ' ') key = 'Space';
+
+      if (key !== 'Control' && key !== 'Shift' && key !== 'Alt') {
+        if (key.length === 1) {
+          parts.push(key.toUpperCase());
+        } else {
+          parts.push(key);
+        }
+      }
+      return parts.join('+');
+    }
+
+    // Global Key Bindings & Listeners
+    function setupGlobalBindings() {
+      document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+          return;
+        }
+
+        const key = e.key;
+        const activeKeyString = keyEventToString(e);
+
+        // 1. Global shortcuts — skip if action is disabled
+        let triggeredAction = null;
+        for (const [actionName, shortcutStr] of Object.entries(state.global_shortcuts || {})) {
+          if (shortcutStr === activeKeyString) {
+            // Only fire if not in the disabled list
+            if (!(state.disabled_global_shortcuts || []).includes(actionName)) {
+              triggeredAction = actionName;
+            }
+            break;
+          }
+        }
+
+        if (triggeredAction) {
+          e.preventDefault();
+          if (triggeredAction === 'next_image') nextImage();
+          else if (triggeredAction === 'prev_image') prevImage();
+          else if (triggeredAction === 'undo') undoAction();
+          else if (triggeredAction === 'delete') deleteImage();
+          else if (triggeredAction === 'rotate_cw') rotateImage(90);
+          else if (triggeredAction === 'rotate_ccw') rotateImage(-90);
+          else if (triggeredAction === 'help') showHelpModal();
+          else if (triggeredAction === 'toggle_explorer') togglePanel('left');
+          else if (triggeredAction === 'toggle_console') togglePanel('bottom');
+          else if (triggeredAction === 'toggle_metadata') togglePanel('right');
+          else if (triggeredAction === 'create_folder') createNewFolder();
+          else if (triggeredAction === 'open_folder') openSourceFolder();
+          return;
+        }
+
+        // 2. Preset hotkeys (1-9) — skip if key is disabled
+        if (/^[1-9]$/.test(key) && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+          const conf = state.hotkeys[key];
+          if (conf && !(state.disabled_preset_keys || []).includes(key)) {
+            e.preventDefault();
+            executeAction(conf.action, conf.target);
+            return;
+          }
+        }
+
+        // 3. Custom hotkeys — skip if disabled (enabled !== false check)
+        const customMatches = (state.custom_hotkeys || []).filter(
+          h => h.key && h.key === activeKeyString && h.enabled !== false
+        );
+        if (customMatches.length > 0) {
+          e.preventDefault();
+          customMatches.forEach(h => {
+            if (h.action === 'delete') deleteImage();
+            else executeAction(h.action, h.target || null);
+          });
+          return;
+        }
+      });
+    }
+
+
+    async function openSourceFolder() {
+      showCustomDialog({
+        title: 'Buka Folder Sumber',
+        message: 'Tempel path absolut direktori gambar Anda (dari File Explorer):',
+        type: 'prompt',
+        defaultValue: state.currentFolder,
+        placeholder: 'Contoh: D:\\Foto\\Basket',
+        onOk: (path) => {
+          if (path) navigateToPath(path);
+        }
+      });
+    }
+
+    // Resizer Panel Drag & Resize Engine
+    function initResizers() {
+      const leftPanel = document.getElementById('left-panel');
+      const rightPanel = document.getElementById('right-panel');
+      const bottomPanel = document.getElementById('bottom-panel');
+
+      const resizerLeft = document.getElementById('resizer-left');
+      const resizerRight = document.getElementById('resizer-right');
+      const resizerBottom = document.getElementById('resizer-bottom');
+
+      resizerLeft.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        resizerLeft.classList.add('resizing');
+        document.addEventListener('mousemove', resizeLeft);
+        document.addEventListener('mouseup', stopResizeLeft);
+      });
+
+      function resizeLeft(e) {
+        const width = e.clientX;
+        if (width > 150 && width < 450) {
+          leftPanel.style.width = `${width}px`;
+          state.panelSizes.left = width;
+        }
+      }
+
+      function stopResizeLeft() {
+        resizerLeft.classList.remove('resizing');
+        document.removeEventListener('mousemove', resizeLeft);
+        document.removeEventListener('mouseup', stopResizeLeft);
+      }
+
+      resizerRight.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        resizerRight.classList.add('resizing');
+        document.addEventListener('mousemove', resizeRight);
+        document.addEventListener('mouseup', stopResizeRight);
+      });
+
+      function resizeRight(e) {
+        const width = document.body.clientWidth - e.clientX;
+        if (width > 150 && width < 450) {
+          rightPanel.style.width = `${width}px`;
+          state.panelSizes.right = width;
+          const filename = state.images[state.currentIndex];
+          if (filename) fetchMetadata(`${state.currentFolder}/${filename}`);
+        }
+      }
+
+      function stopResizeRight() {
+        resizerRight.classList.remove('resizing');
+        document.removeEventListener('mousemove', resizeRight);
+        document.removeEventListener('mouseup', stopResizeRight);
+      }
+
+      resizerBottom.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        resizerBottom.classList.add('resizing');
+        document.addEventListener('mousemove', resizeBottom);
+        document.addEventListener('mouseup', stopResizeBottom);
+      });
+
+      function resizeBottom(e) {
+        const height = window.innerHeight - e.clientY - 32;
+        if (height > 80 && height < 400) {
+          bottomPanel.style.height = `${height}px`;
+          state.panelSizes.bottom = height;
+        }
+      }
+
+      function stopResizeBottom() {
+        resizerBottom.classList.remove('resizing');
+        document.removeEventListener('mousemove', resizeBottom);
+        document.removeEventListener('mouseup', stopResizeBottom);
+      }
+    }
+  </script>
+</body>
+
+</html>
