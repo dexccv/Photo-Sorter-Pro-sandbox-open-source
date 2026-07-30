@@ -1,0 +1,176 @@
+:root {
+      --bg-main: #09090b;
+      --bg-panel: #141416;
+      --bg-border: #27272a;
+      --color-accent: #3b82f6;
+      --color-accent-hover: #60a5fa;
+    }
+
+    .theme-midnight {
+      --bg-main: #0b0f19;
+      --bg-panel: #111827;
+      --bg-border: #1f2937;
+      --color-accent: #ec4899;
+      --color-accent-hover: #f472b6;
+    }
+
+    .theme-emerald {
+      --bg-main: #022c22;
+      --bg-panel: #064e3b;
+      --bg-border: #0f766e;
+      --color-accent: #10b981;
+      --color-accent-hover: #34d399;
+    }
+
+    .theme-cyberpunk {
+      --bg-main: #080510;
+      --bg-panel: #140e28;
+      --bg-border: #2c1a4d;
+      --color-accent: #d946ef;
+      --color-accent-hover: #f472b6;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: #f4f4f5;
+      overflow: hidden;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-panel);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3b82f6;
+    }
+
+    /* Drag Dividers styling */
+    .resizer-h {
+      width: 4px;
+      cursor: col-resize;
+      transition: background 0.2s;
+    }
+
+    .resizer-h:hover,
+    .resizer-h.resizing {
+      background: #3b82f6;
+    }
+
+    .resizer-v {
+      height: 4px;
+      cursor: row-resize;
+      transition: background 0.2s;
+    }
+
+    .resizer-v:hover,
+    .resizer-v.resizing {
+      background: #3b82f6;
+    }
+
+    /* Animation Keyframes */
+    @keyframes slideOutRight {
+      from {
+        transform: translateX(0) scale(1);
+        opacity: 1;
+        filter: blur(0);
+      }
+
+      to {
+        transform: translateX(40px) scale(0.95);
+        opacity: 0;
+        filter: blur(4px);
+      }
+    }
+
+    @keyframes slideInLeft {
+      from {
+        transform: translateX(-30px) scale(0.95);
+        opacity: 0;
+        filter: blur(4px);
+      }
+
+      to {
+        transform: translateX(0) scale(1);
+        opacity: 1;
+        filter: blur(0);
+      }
+    }
+
+    @keyframes shrinkOut {
+      from {
+        transform: scale(1);
+        opacity: 1;
+      }
+
+      to {
+        transform: scale(0.85);
+        opacity: 0;
+      }
+    }
+
+    .animate-move-out {
+      animation: slideOutRight 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    .animate-delete-out {
+      animation: shrinkOut 0.18s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    .animate-image-in {
+      animation: slideInLeft 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    /* Skeleton shimmer for thumbnail placeholders */
+    @keyframes shimmer {
+      0% {
+        background-position: -400px 0;
+      }
+
+      100% {
+        background-position: 400px 0;
+      }
+    }
+
+    .skeleton-shimmer {
+      background: linear-gradient(90deg, #18181b 25%, #27272a 50%, #18181b 75%);
+      background-size: 800px 100%;
+      animation: shimmer 1.4s infinite linear;
+    }
+
+    /* ---- iOS-style Toggle Switch ---- */
+    .toggle-sw { position: relative; display: inline-flex; width: 34px; height: 19px; flex-shrink: 0; }
+    .toggle-sw input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-sw .slider { position: absolute; cursor: pointer; inset: 0;
+      background: #3f3f46; border-radius: 19px; transition: background .18s; }
+    .toggle-sw .slider:before { content: ''; position: absolute;
+      width: 13px; height: 13px; left: 3px; bottom: 3px;
+      background: #fff; border-radius: 50%; transition: transform .18s;
+      box-shadow: 0 1px 3px #0004; }
+    .toggle-sw input:checked + .slider { background: var(--color-accent); }
+    .toggle-sw input:checked + .slider:before { transform: translateX(15px); }
+    .toggle-sw input:disabled + .slider { opacity: .4; cursor: not-allowed; }
+
+    /* ---- Shortcut row disabled visual ---- */
+    .shortcut-row-disabled { opacity: 0.42; }
+    .shortcut-row-disabled .key-badge { text-decoration: line-through; }
+
+    /* ---- Conflict badges ---- */
+    .conflict-badge { display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; font-weight: 600; border-radius: 6px;
+      padding: 2px 7px; line-height: 1.6; }
+    .conflict-critical { background: #450a0a; color: #f87171; border: 1px solid #7f1d1d; }
+    .conflict-warning  { background: #431407; color: #fb923c; border: 1px solid #7c2d12; }
+    .conflict-info     { background: #1c1917; color: #a8a29e; border: 1px solid #44403c; }
+    .conflict-app      { background: #1e1b4b; color: #a5b4fc; border: 1px solid #3730a3; }
+    .conflict-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; padding-left: 4px; }

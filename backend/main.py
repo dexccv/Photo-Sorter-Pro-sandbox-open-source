@@ -1,4 +1,5 @@
 import os
+import asyncio
 import sys
 import shutil
 import string
@@ -6,11 +7,14 @@ import json
 import base64
 import hashlib
 import time
+import subprocess
 import concurrent.futures
 from io import BytesIO
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Query, Request
+import mimetypes
+from backend.watcher import start_watcher, stop_watcher, is_watcher_active
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse, Response
@@ -28,18 +32,13 @@ def resolve_path(path: str) -> str:
     """Normalize path and strip 'This PC\' prefix for standard drives or preserve MTP paths"""
     if not path:
         return ""
-    p = path.replace('/', '\\').strip()
-    if p.lower() in ["this pc", "thispc", "computer"]:
+    if path == "This PC" or path == "This PC\\":
         return ""
-    if p.lower().startswith("this pc\\"):
-        sub = p[8:].strip()
-        if len(sub) >= 2 and sub[1] == ':':
-            return sub
-        if sub.startswith("Local Disk (") and len(sub) >= 14 and sub[12] == ':':
-            drive_letter = sub[11:13]
-            rest = sub[14:].lstrip('\\/')
-            return f"{drive_letter}\\{rest}" if rest else f"{drive_letter}\\"
-    return p
+    if is_mtp_path(path):
+        return path
+    if path.startswith("This PC\\"):
+        path = path[8:]
+    return os.path.normpath(path)
 
 def get_real_file_path(full_file_path: str) -> str:
     """Extract MTP file to local cache if needed and return valid local file path"""
@@ -55,18 +54,25 @@ def get_real_file_path(full_file_path: str) -> str:
         
     return resolved
 
-# In-memory thumbnail LRU cache: path -> (etag, jpeg_bytes, size_wh)
-_thumb_cache: Dict[str, tuple] = {}
-THUMB_CACHE_MAX = 1000  # max entries in RAM
-
 # Background thread pool for pre-warming thumbnails (non-blocking)
 _prewarm_executor = concurrent.futures.ThreadPoolExecutor(max_workers=3, thread_name_prefix="prewarm")
 
 app = FastAPI(title="Modern Photo Sorter API")
 
+_folder_changed = False
+def _on_folder_change():
+    global _folder_changed
+    _folder_changed = True
+
 @app.on_event("startup")
 def setup_windows_asyncio_exception_handler():
     if os.name == 'nt':
+        # Start folder auto-refresh watcher based on last_folder
+        try:
+            if session_data.get("last_folder"):
+                start_watcher(session_data["last_folder"], _on_folder_change)
+        except Exception as e:
+            log_event("WATCHER", f"Failed to start watcher: {e}")
         import asyncio
         try:
             loop = asyncio.get_event_loop()
@@ -79,17 +85,31 @@ def setup_windows_asyncio_exception_handler():
         except Exception:
             pass
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"status": "error", "detail": str(exc)}
+    )
+
 # Enable CORS for frontend development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://127.0.0.1:8000", "http://localhost:8000", "http://127.0.0.1:5500", "http://localhost:5500", "http://127.0.0.1:5173", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-SESSION_FILE = "sorter_session.json"
-DEFAULT_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"]
+SESSION_DIR = os.path.join(os.path.expanduser("~"), ".photo_sorter")
+os.makedirs(SESSION_DIR, exist_ok=True)
+SESSION_FILE = os.path.join(SESSION_DIR, "sorter_session.json")
+THUMB_CACHE_DIR = os.path.join(SESSION_DIR, ".thumb_cache")
+os.makedirs(THUMB_CACHE_DIR, exist_ok=True)
+
+# Auto-refresh watcher flag (managed by watcher module)
+
+DEFAULT_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".mp4", ".webm", ".mov"]
 DEFAULT_GLOBAL_SHORTCUTS = {
     "next_image": "ArrowRight",
     "prev_image": "ArrowLeft",
@@ -122,6 +142,21 @@ class BatchActionPayload(BaseModel):
 class CreateFolderPayload(BaseModel):
     parent_folder: str
     folder_name: str
+
+class RenamePayload(BaseModel):
+    src_folder: str
+    old_name: str
+    new_name: str
+
+class MetadataPayload(BaseModel):
+    folder: str
+    filename: str
+    rating: Optional[int] = None
+    flag: Optional[str] = None
+
+class BatchRenamePayload(BaseModel):
+    folder: str
+
 
 class SettingsPayload(BaseModel):
     hotkeys: Dict[str, Dict]
@@ -156,6 +191,7 @@ class LayoutPayload(BaseModel):
     show_left_sidebar: Optional[bool] = True
     show_right_panel: Optional[bool] = True
     show_bottom_panel: Optional[bool] = True
+    docks: Optional[Dict[str, str]] = None  # {explorer, inspector, console} -> 'left'|'right'|'bottom'|'hidden'
 
 # Session state loaded in memory
 session_data = {
@@ -203,7 +239,13 @@ def load_session():
         try:
             with open(SESSION_FILE, 'r') as f:
                 loaded = json.load(f)
-                session_data.update(loaded)
+                # Deep-merge nested dicts (e.g. 'layout', 'panel_sizes') instead of
+                # replacing them wholesale, so added default keys are never lost.
+                for key, value in loaded.items():
+                    if key in session_data and isinstance(session_data[key], dict) and isinstance(value, dict):
+                        session_data[key] = {**session_data[key], **value}  # type: ignore[arg-type]
+                    else:
+                        session_data[key] = value
         except Exception:
             pass
 
@@ -216,8 +258,7 @@ def save_session():
 
 load_session()
 
-class PinnedFoldersPayload(BaseModel):
-    pinned_folders: List[str]
+# (Duplicate class removed — PinnedFoldersPayload is defined above at line 144)
 
 @app.get("/api/drives")
 def get_drives():
@@ -323,7 +364,7 @@ def scan_images(path: str = Query(...)):
         return {
             "folder": path,
             "images": files,
-            "lastIndex": session_data["last_index"] if session_data["last_folder"] == path else 0
+            "lastIndex": per_folder.get(path, session_data.get("last_index", 0))
         }
 
     if not real_path or not os.path.exists(real_path) or not os.path.isdir(real_path):
@@ -336,15 +377,94 @@ def scan_images(path: str = Query(...)):
         
         session_data["last_folder"] = path
         save_session()
+        start_watcher(real_path, _on_folder_change)
+
+        # Use per-folder remembered index (most accurate), fallback to global last_index
+        per_folder = session_data.get("per_folder_index", {})
+        last_idx = per_folder.get(path, session_data.get("last_index", 0))
+        # Clamp to valid range
+        if files:
+            last_idx = max(0, min(last_idx, len(files) - 1))
+        else:
+            last_idx = 0
+            
+        meta = load_folder_metadata(real_path)
         
-        log_event("SCAN", f"Scanning directory: '{real_path}' (Found {len(files)} images)")
+        log_event("SCAN", f"Scanning directory: '{real_path}' (Found {len(files)} images, last_idx={last_idx})")
         return {
             "folder": path,
             "images": files,
-            "lastIndex": session_data["last_index"] if session_data["last_folder"] == path else 0
+            "metadata": meta,
+            "lastIndex": last_idx
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+def get_folder_metadata_file(real_path: str) -> str:
+    meta_dir = os.path.join(real_path, ".photo_sorter")
+    if not os.path.exists(meta_dir):
+        try:
+            os.makedirs(meta_dir, exist_ok=True)
+            if os.name == "nt":
+                import ctypes
+                ctypes.windll.kernel32.SetFileAttributesW(meta_dir, 2)
+        except Exception:
+            pass # fallback if permission denied
+    return os.path.join(meta_dir, "metadata.json")
+
+def load_folder_metadata(real_path: str) -> dict:
+    fpath = get_folder_metadata_file(real_path)
+    if os.path.exists(fpath):
+        try:
+            with open(fpath, "r", encoding="utf-8") as f:
+                import json
+                return json.load(f)
+        except:
+            pass
+    return {}
+
+def save_folder_metadata(real_path: str, data: dict):
+    fpath = get_folder_metadata_file(real_path)
+    try:
+        with open(fpath, "w", encoding="utf-8") as f:
+            import json
+            json.dump(data, f, indent=2)
+    except:
+        pass
+
+@app.post("/api/update-metadata")
+def update_metadata(payload: MetadataPayload):
+    real_path = resolve_path(payload.folder)
+    if not real_path or not os.path.exists(real_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+        
+    meta = load_folder_metadata(real_path)
+    if payload.filename not in meta:
+        meta[payload.filename] = {}
+        
+    if payload.rating is not None:
+        meta[payload.filename]["rating"] = payload.rating
+    if payload.flag is not None:
+        if payload.flag == "none":
+            meta[payload.filename].pop("flag", None)
+        else:
+            meta[payload.filename]["flag"] = payload.flag
+            
+    save_folder_metadata(real_path, meta)
+    return {"status": "success", "metadata": meta.get(payload.filename)}
+
+@app.get("/api/watch")
+async def watch_folder_endpoint(request: Request):
+    async def event_generator():
+        global _folder_changed
+        while True:
+            if await request.is_disconnected():
+                break
+            if _folder_changed:
+                _folder_changed = False
+                yield "data: refresh\n\n"
+            await asyncio.sleep(0.5)
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.get("/api/image")
 def get_image(request: Request, path: str = Query(...)):
@@ -375,14 +495,14 @@ def get_thumbnail(request: Request, path: str = Query(...), size: int = Query(24
     stat = os.stat(real_path)
     cache_key = f"{real_path}:{size}:{stat.st_mtime}"
     etag = f'"{hashlib.md5(cache_key.encode()).hexdigest()}"'
+    thumb_filepath = os.path.join(THUMB_CACHE_DIR, f"{hashlib.md5(cache_key.encode()).hexdigest()}.jpg")
 
     if request.headers.get("if-none-match") == etag:
         return Response(status_code=304)
 
-    if cache_key in _thumb_cache:
-        cached_etag, cached_bytes = _thumb_cache[cache_key]
-        return Response(
-            content=cached_bytes,
+    if os.path.exists(thumb_filepath):
+        return FileResponse(
+            thumb_filepath,
             media_type="image/jpeg",
             headers={
                 "ETag": etag,
@@ -396,22 +516,14 @@ def get_thumbnail(request: Request, path: str = Query(...), size: int = Query(24
             if img.mode not in ("RGB", "L"):
                 img = img.convert("RGB")
             img.thumbnail((size, size), Image.LANCZOS)
-            buf = BytesIO()
-            img.save(buf, format="JPEG", quality=75, optimize=True, progressive=True)
-            jpeg_bytes = buf.getvalue()
+            img.save(thumb_filepath, format="JPEG", quality=75, optimize=True, progressive=True)
 
-        if len(_thumb_cache) >= THUMB_CACHE_MAX:
-            oldest_key = next(iter(_thumb_cache))
-            del _thumb_cache[oldest_key]
-        _thumb_cache[cache_key] = (etag, jpeg_bytes)
-
-        return Response(
-            content=jpeg_bytes,
+        return FileResponse(
+            thumb_filepath,
             media_type="image/jpeg",
             headers={
                 "ETag": etag,
                 "Cache-Control": "private, max-age=86400",
-                "Content-Length": str(len(jpeg_bytes)),
             }
         )
     except Exception as e:
@@ -424,21 +536,17 @@ def _generate_thumbnail_background(real_path: str, size: int):
             return
         stat = os.stat(real_path)
         cache_key = f"{real_path}:{size}:{stat.st_mtime}"
-        if cache_key in _thumb_cache:
+        thumb_filepath = os.path.join(THUMB_CACHE_DIR, f"{hashlib.md5(cache_key.encode()).hexdigest()}.jpg")
+        
+        if os.path.exists(thumb_filepath):
             return  # Already cached, nothing to do
+            
         with Image.open(real_path) as img:
             img = ImageOps.exif_transpose(img)
             if img.mode not in ("RGB", "L"):
                 img = img.convert("RGB")
             img.thumbnail((size, size), Image.LANCZOS)
-            buf = BytesIO()
-            img.save(buf, format="JPEG", quality=75, optimize=True, progressive=True)
-            jpeg_bytes = buf.getvalue()
-        etag = f'"{hashlib.md5(cache_key.encode()).hexdigest()}"'
-        if len(_thumb_cache) >= THUMB_CACHE_MAX:
-            oldest_key = next(iter(_thumb_cache))
-            del _thumb_cache[oldest_key]
-        _thumb_cache[cache_key] = (etag, jpeg_bytes)
+            img.save(thumb_filepath, format="JPEG", quality=75, optimize=True, progressive=True)
     except Exception:
         pass  # Silently ignore — this is best-effort pre-warming
 
@@ -454,10 +562,23 @@ def prewarm_thumbnails(payload: PrewarmPayload):
         if not real_path or not os.path.exists(real_path):
             continue
         cache_key = f"{real_path}:{size}:{os.stat(real_path).st_mtime}"
-        if cache_key not in _thumb_cache:
+        thumb_filepath = os.path.join(THUMB_CACHE_DIR, f"{hashlib.md5(cache_key.encode()).hexdigest()}.jpg")
+        if not os.path.exists(thumb_filepath):
             _prewarm_executor.submit(_generate_thumbnail_background, real_path, size)
             queued += 1
     return {"status": "queued", "count": queued}
+
+def get_decimal_from_dms(dms, ref):
+    try:
+        degrees = float(dms[0])
+        minutes = float(dms[1]) / 60.0
+        seconds = float(dms[2]) / 3600.0
+        dec = degrees + minutes + seconds
+        if ref in ['S', 'W']:
+            dec = -dec
+        return round(dec, 5)
+    except:
+        return 0.0
 
 @app.get("/api/metadata")
 def get_metadata(path: str = Query(...)):
@@ -467,7 +588,12 @@ def get_metadata(path: str = Query(...)):
         raise HTTPException(status_code=404, detail="File not found")
         
     try:
-        exif_data = {"Camera": "-", "ISO": "-", "Aperture": "-", "Shutter": "-"}
+        exif_data = {
+            "Camera": "-", "ISO": "-", "Aperture": "-", "Shutter": "-",
+            "Focal Length": "-", "White Balance": "-", "Flash": "-",
+            "Date Taken": "-", "Exposure Bias": "-", "Metering Mode": "-",
+            "Color Space": "-", "Software": "-", "Lens Model": "-"
+        }
         width, height = 0, 0
         size_bytes = os.path.getsize(real_path)
         size_mb = size_bytes / (1024 * 1024)
@@ -481,7 +607,34 @@ def get_metadata(path: str = Query(...)):
                     if tag == "Model": exif_data["Camera"] = str(value).strip()
                     elif tag == "ISOSpeedRatings": exif_data["ISO"] = str(value)
                     elif tag == "FNumber": exif_data["Aperture"] = f"f/{float(value):.1f}"
-                    elif tag == "ExposureTime": exif_data["Shutter"] = f"{value}s"
+                    elif tag == "ExposureTime": 
+                        if isinstance(value, tuple) and len(value) == 2:
+                            exif_data["Shutter"] = f"{value[0]}/{value[1]}s"
+                        else:
+                            exif_data["Shutter"] = f"{value}s"
+                    elif tag == "FocalLength": exif_data["Focal Length"] = f"{float(value)}mm"
+                    elif tag == "WhiteBalance": exif_data["White Balance"] = "Auto" if value == 0 else "Manual"
+                    elif tag == "Flash": exif_data["Flash"] = "Yes" if value & 1 else "No"
+                    elif tag == "DateTimeOriginal": exif_data["Date Taken"] = str(value)
+                    elif tag == "ExposureBiasValue": exif_data["Exposure Bias"] = f"{float(value)} EV"
+                    elif tag == "MeteringMode":
+                        modes = {1:"Average", 2:"CenterWeightedAverage", 3:"Spot", 4:"MultiSpot", 5:"Pattern", 6:"Partial"}
+                        exif_data["Metering Mode"] = modes.get(value, str(value))
+                    elif tag == "ColorSpace": exif_data["Color Space"] = "sRGB" if value == 1 else "Uncalibrated"
+                    elif tag == "Software": exif_data["Software"] = str(value)
+                    elif tag == "LensModel": exif_data["Lens Model"] = str(value)
+                    elif tag == "GPSInfo":
+                        try:
+                            gps = {}
+                            for t in value:
+                                sub_tag = ExifTags.GPSTAGS.get(t, t)
+                                gps[sub_tag] = value[t]
+                            if "GPSLatitude" in gps and "GPSLongitude" in gps:
+                                lat = get_decimal_from_dms(gps["GPSLatitude"], gps.get("GPSLatitudeRef", "N"))
+                                lon = get_decimal_from_dms(gps["GPSLongitude"], gps.get("GPSLongitudeRef", "E"))
+                                exif_data["GPS"] = f"{lat}, {lon}"
+                        except:
+                            pass
             
             small_img = img.copy()
             small_img.thumbnail((100, 100))
@@ -504,6 +657,98 @@ def get_metadata(path: str = Query(...)):
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+def compute_ahash(img: Image.Image, hash_size: int = 8) -> str:
+    try:
+        img = img.convert("L").resize((hash_size, hash_size), Image.LANCZOS)
+        pixels = list(img.getdata())
+        avg = sum(pixels) / len(pixels)
+        bits = "".join(["1" if p > avg else "0" for p in pixels])
+        return hex(int(bits, 2))[2:].zfill(hash_size * hash_size // 4)
+    except:
+        return ""
+
+@app.get("/api/find-duplicates")
+def find_duplicates(path: str = Query(...)):
+    """Scan folder for identical or similar images based on perceptual hash"""
+    real_path = resolve_path(path)
+    if not real_path or not os.path.exists(real_path) or not os.path.isdir(real_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+        
+    exts = tuple(session_data.get("extensions", DEFAULT_EXTENSIONS))
+    files = [f for f in os.listdir(real_path) if f.lower().endswith(exts) and os.path.isfile(os.path.join(real_path, f))]
+    
+    hashes = {}
+    duplicates = []
+    
+    for f in files:
+        f_path = os.path.join(real_path, f)
+        try:
+            with Image.open(f_path) as img:
+                h = compute_ahash(img)
+                if h:
+                    if h in hashes:
+                        hashes[h].append(f)
+                    else:
+                        hashes[h] = [f]
+        except:
+            pass
+            
+    for h, group in hashes.items():
+        if len(group) > 1:
+            duplicates.append(group)
+            
+    return {"status": "success", "duplicates": duplicates}
+
+@app.post("/api/batch-rename-exif")
+def batch_rename_exif(payload: BatchRenamePayload):
+    real_path = resolve_path(payload.folder)
+    if not real_path or not os.path.exists(real_path):
+        raise HTTPException(status_code=404, detail="Directory not found")
+        
+    exts = tuple(session_data.get("extensions", DEFAULT_EXTENSIONS))
+    files = [f for f in os.listdir(real_path) if f.lower().endswith(exts) and os.path.isfile(os.path.join(real_path, f))]
+    
+    renamed_count = 0
+    for f in files:
+        f_path = os.path.join(real_path, f)
+        try:
+            with Image.open(f_path) as img:
+                exif = img._getexif()
+                date_taken = None
+                if exif:
+                    for tag_id, value in exif.items():
+                        tag = ExifTags.TAGS.get(tag_id, tag_id)
+                        if tag == "DateTimeOriginal":
+                            date_taken = str(value)
+                            break
+            if date_taken:
+                # Format: 2024:05:12 10:30:00 -> 2024-05-12_10-30-00
+                safe_date = date_taken.replace(":", "-").replace(" ", "_")
+                ext = os.path.splitext(f)[1]
+                new_name = f"{safe_date}{ext}"
+                new_path = os.path.join(real_path, new_name)
+                
+                # Handle duplicates e.g., if multiple photos taken in the same second
+                counter = 1
+                while os.path.exists(new_path) and f_path != new_path:
+                    new_name = f"{safe_date}_{counter}{ext}"
+                    new_path = os.path.join(real_path, new_name)
+                    counter += 1
+
+                if f_path != new_path:
+                    os.rename(f_path, new_path)
+                    renamed_count += 1
+                    undo_stack.append({
+                        "action": "rename",
+                        "src": f_path,
+                        "dst": new_path,
+                        "file_name": f
+                    })
+        except Exception:
+            pass
+            
+    return {"status": "success", "renamed_count": renamed_count}
 
 @app.post("/api/action")
 def execute_action(payload: ActionPayload):
@@ -565,13 +810,30 @@ def execute_action(payload: ActionPayload):
         raise HTTPException(status_code=400, detail=str(e))
 
 def _open_folder_dialog(initial_dir: Optional[str] = None) -> str:
+    # 1. Try Windows Native PowerShell FolderBrowserDialog
+    if os.name == 'nt':
+        try:
+            ps_script = "[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null; $f = New-Object System.Windows.Forms.FolderBrowserDialog; "
+            if initial_dir and os.path.exists(initial_dir):
+                ps_script += f'$f.SelectedPath = "{initial_dir.replace("/", "\\")}"; '
+            ps_script += "if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Host $f.SelectedPath }"
+            
+            cmd = ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script]
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            selected = res.stdout.strip()
+            if selected and os.path.exists(selected):
+                return selected
+        except Exception as e:
+            print(f"PowerShell folder dialog fallback error: {e}")
+
+    # 2. Fallback to Tkinter
     try:
         root = tk.Tk()
         root.withdraw()
         root.attributes("-topmost", True)
         folder = filedialog.askdirectory(initialdir=initial_dir or None, title="Pilih Folder Tujuan / Directory")
         root.destroy()
-        return folder
+        return folder or ""
     except Exception as e:
         print(f"Error opening folder dialog: {e}")
         return ""
@@ -684,29 +946,64 @@ def execute_undo():
             log_event("UNDO", f"CLEANED: Removed copy of '{last['file_name']}' from '{last['dst']}'")
             return {"status": "success", "message": f"Undo copy: Removed copy of {last['file_name']}"}
             
+        if action == "rename":
+            shutil.move(last["src"], last["dst"])
+            log_event("UNDO", f"RESTORED: Renamed '{last['file_name']}' back")
+            return {"status": "success", "message": f"Undo rename: Restored original name"}
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/create-folder")
 def create_folder(payload: CreateFolderPayload):
     """Create a new subfolder"""
-    target = os.path.join(payload.parent_folder, payload.folder_name)
+    # Sanitize folder name
+    sanitized_name = payload.folder_name.replace("/", "").replace("\\", "").replace("..", "")
+    target = os.path.join(payload.parent_folder, sanitized_name)
     try:
         os.makedirs(target, exist_ok=True)
-        log_event("FOLDER", f"CREATED: Subfolder '{payload.folder_name}' inside '{payload.parent_folder}'")
+        log_event("FOLDER", f"CREATED: Subfolder '{sanitized_name}' inside '{payload.parent_folder}'")
         return {"status": "success", "path": target}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/api/rename")
+def rename_file(payload: RenamePayload):
+    """Rename a file"""
+    src_path = os.path.join(payload.src_folder, payload.old_name)
+    if not os.path.exists(src_path):
+        raise HTTPException(status_code=404, detail="Source file not found")
+    
+    sanitized_new_name = payload.new_name.replace("/", "").replace("\\", "").replace("..", "")
+    dst_path = os.path.join(payload.src_folder, sanitized_new_name)
+    
+    if os.path.exists(dst_path):
+        raise HTTPException(status_code=400, detail="Target name already exists")
+        
+    try:
+        shutil.move(src_path, dst_path)
+        log_event("FILE", f"RENAME: '{payload.old_name}' -> '{sanitized_new_name}'")
+        undo_stack.append({
+            "action": "rename",
+            "src": dst_path, # the new location
+            "dst": src_path, # the old location
+            "file_name": sanitized_new_name
+        })
+        return {"status": "success", "new_name": sanitized_new_name, "dst_path": dst_path}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/api/rotate")
 def rotate_image(path: str = Query(...), degrees: int = Query(...)):
-    """Rotate image physically on disk"""
+    """Rotate image physically on disk, preserving EXIF metadata"""
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="File not found")
     try:
         with Image.open(path) as img:
             rotated = img.rotate(-degrees, expand=True)
-            rotated.save(path)
+            # Preserve EXIF data
+            exif_bytes = img.info.get('exif', b'')
+            rotated.save(path, exif=exif_bytes)
         log_event("IMAGE", f"ROTATED: '{os.path.basename(path)}' by {degrees}°")
         return {"status": "success", "message": f"Rotated image by {degrees} degrees"}
     except Exception as e:
@@ -787,10 +1084,17 @@ def get_session():
 
 @app.post("/api/session-layout")
 def save_session_layout(payload: LayoutPayload):
-    """Save user's custom layout preferences"""
-    session_data["layout"] = payload.dict()
+    """Save user's custom layout preferences including docks configuration"""
+    layout_dict = payload.dict()
+    # Remove None values so we don't overwrite existing layout fields with None
+    layout_dict = {k: v for k, v in layout_dict.items() if v is not None}
+    # Deep-merge into existing layout (preserves fields not sent by client)
+    existing: Dict[str, Any] = session_data.get("layout", {})  # type: ignore[assignment]
+    merged: Dict[str, Any] = {**existing, **layout_dict}
+    session_data["layout"] = merged
     save_session()
-    log_event("LAYOUT", f"Layout saved: Preset='{payload.preset}', Stage={payload.show_stage}, Position='{payload.presets_position}'")
+    docks_info = payload.docks or {}
+    log_event("LAYOUT", f"Layout saved: Preset='{payload.preset}', Stage={payload.show_stage}, Docks={docks_info}")
     return {"status": "success", "layout": session_data["layout"]}
 
 @app.post("/api/pinned-folders")

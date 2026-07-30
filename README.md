@@ -8,6 +8,22 @@ Developed and maintained by **[dexccv](https://github.com/dexccv)**.
 
 ## Overview
 
+---
+### Recent Updates (2026‑07‑31)
+- **Extensive Frontend Refactoring**: Split the monolithic `index.html` into modular `app.js` and `styles.css` for better maintainability.
+- **Backend Bug Fixes**: Resolved `get_mtp_file_local_path` and `get_thumbnail_path` undefined references in `backend/main.py`.
+- **Type Hinting**: Fixed static dictionary type hinting and assignment mismatches during session layout saving.
+- **Import Fixes**: Addressed missing `asyncio` import that caused runtime errors in folder watch endpoints.
+- Added **folder auto‑refresh watcher** using `watchdog` to automatically detect file system changes and keep the UI in sync when sorting actions move files.
+- Fixed **EXIF loss on image rotation** by preserving EXIF metadata during the `/api/rotate` operation.
+- Improved **per‑folder index handling** in `/api/scan-images` for accurate navigation across folders.
+- Updated CORS middleware comment and clarified its purpose.
+- Added **light‑theme CSS** and basic slideshow support (frontend placeholders).
+- Created `backend/watcher.py` module and integrated startup logic.
+
+---
+## Overview
+
 Photo Sorter Pro streamlines professional photo selection workflows for photographers, digital archivists, and content creators. It eliminates the overhead of heavy desktop software by leveraging lightweight web standards paired with native system APIs for instant storage device scanning.
 
 ### Core Capabilities

@@ -8,6 +8,27 @@ from typing import List, Dict, Optional
 CACHE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".mtp_cache"))
 os.makedirs(CACHE_DIR, exist_ok=True)
 
+import time
+import shutil
+
+def cleanup_mtp_cache(days=7):
+    """Clear cached files older than `days`"""
+    try:
+        now = time.time()
+        for root, dirs, files in os.walk(CACHE_DIR):
+            for f in files:
+                path = os.path.join(root, f)
+                if os.stat(path).st_mtime < now - days * 86400:
+                    try:
+                        os.remove(path)
+                    except:
+                        pass
+    except Exception as e:
+        print(f"Error cleaning MTP cache: {e}")
+
+# Run cleanup on module load
+cleanup_mtp_cache()
+
 def is_mtp_path(path: str) -> bool:
     if not path:
         return False

@@ -1,0 +1,24 @@
+body.theme-light {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+}
+
+body.theme-light .bg-black { background-color: #f4f4f5 !important; }
+body.theme-light .bg-zinc-950 { background-color: #ffffff !important; }
+body.theme-light .bg-zinc-900 { background-color: #f4f4f5 !important; }
+body.theme-light .bg-zinc-800 { background-color: #e4e4e7 !important; }
+body.theme-light .bg-zinc-950\/80 { background-color: rgba(255,255,255,0.8) !important; }
+body.theme-light .bg-black\/85 { background-color: rgba(244,244,245,0.85) !important; }
+
+body.theme-light .text-white { color: #000000 !important; }
+body.theme-light .text-zinc-300 { color: #18181b !important; }
+body.theme-light .text-zinc-400 { color: #3f3f46 !important; }
+body.theme-light .text-zinc-500 { color: #52525b !important; }
+
+body.theme-light .border-zinc-800,
+body.theme-light .border-zinc-900,
+body.theme-light .border-zinc-700\/80,
+body.theme-light .border-white\/20,
+body.theme-light .border-brand-border { 
+    border-color: #d4d4d8 !important; 
+}

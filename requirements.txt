@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pillow
+pydantic
+send2trash
+comtypes
+watchdog
+pyinstaller
